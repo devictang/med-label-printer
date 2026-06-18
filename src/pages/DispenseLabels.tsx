@@ -14,12 +14,20 @@ import {
   HiOutlineDocumentText,
 } from 'react-icons/hi2';
 import { loadProfile } from '../lib/storage';
-import { fetchDrugs } from '../lib/supabase';
+import { fetchDrugs, fetchWarningTemplates } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { downloadLabelPDF, previewLabelPDF } from '../lib/pdfGenerator';
+import PrecautionEditor from '../components/PrecautionEditor';
 import type { Drug, PharmacyProfile, LabelItem, LabelGridConfig } from '../types';
 import { loadGridConfig } from '../lib/storage';
 import { DEFAULT_GRID } from '../types';
+
+/** Fallback warnings when Supabase is not connected. */
+const FALLBACK_WARNINGS = [
+  '此藥引致昏睡，服藥後避免駕駛或操作機械。',
+  '此藥可能引致腸胃不適，請飽肚服用。',
+  '處方藥物 Prescription Drug',
+];
 
 interface LabelRow {
   id: string;
@@ -53,6 +61,7 @@ export default function DispenseLabelsPage() {
   const [gridConfig, setGridConfig] = useState<LabelGridConfig>(DEFAULT_GRID);
   const [generating, setGenerating] = useState(false);
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [templates, setTemplates] = useState<string[]>(FALLBACK_WARNINGS);
   const pickerInputRef = useRef<HTMLInputElement | null>(null);
 
   const supabaseOk = isSupabaseConfigured();
@@ -67,6 +76,9 @@ export default function DispenseLabelsPage() {
   useEffect(() => {
     if (!supabaseOk) return;
     fetchDrugs().then(setDrugs).catch(() => {});
+    fetchWarningTemplates()
+      .then((data) => setTemplates(data.map((t) => t.text)))
+      .catch(() => {});
   }, [supabaseOk]);
 
   const addRow = () => setRows((prev) => [...prev, createEmptyRow()]);
@@ -360,13 +372,12 @@ export default function DispenseLabelsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                      注意事項 <span className="text-slate-300 font-normal normal-case">(直接修改，每行一項)</span>
+                      注意事項 <span className="text-slate-300 font-normal normal-case">(最多 3 項)</span>
                     </label>
-                    <textarea
+                    <PrecautionEditor
                       value={row.customPrecautions}
-                      onChange={(e) => updateRow(row.id, 'customPrecautions', e.target.value)}
-                      rows={3}
-                      className="input-modern px-3.5 resize-none"
+                      onChange={(v) => updateRow(row.id, 'customPrecautions', v)}
+                      commonPrecautions={templates}
                     />
                   </div>
                 </div>

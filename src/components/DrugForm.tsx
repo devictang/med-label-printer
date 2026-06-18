@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { HiOutlineXMark, HiOutlineBeaker, HiOutlineCheckCircle } from 'react-icons/hi2';
 import type { Drug } from '../types';
+import PrecautionEditor from './PrecautionEditor';
+import { fetchWarningTemplates, isSupabaseConfigured } from '../lib/supabase';
+
+const COMMON_PRECAUTIONS = [
+  '此藥引致昏睡，服藥後避免駕駛或操作機械。',
+  '此藥可能引致腸胃不適，請飽肚服用。',
+  '處方藥物 Prescription Drug',
+];
 
 interface Props {
   drug: Drug | null;
@@ -66,7 +74,16 @@ const USAGE_PRESETS: Record<string, { usage: string; precautions: string }> = {
 
 export default function DrugFormModal({ drug, onSave, onClose }: Props) {
   const [form, setForm] = useState({ ...emptyForm });
+  const [templates, setTemplates] = useState<string[]>(COMMON_PRECAUTIONS);
   const isEditing = !!drug;
+
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      fetchWarningTemplates()
+        .then((data) => setTemplates(data.map((t) => t.text)))
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (drug) {
@@ -227,14 +244,12 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-              預設注意事項 <span className="text-slate-300 font-normal normal-case">(每行一項)</span>
+              預設注意事項 <span className="text-slate-300 font-normal normal-case">(最多 3 項)</span>
             </label>
-            <textarea
+            <PrecautionEditor
               value={form.default_precautions}
-              onChange={(e) => update('default_precautions', e.target.value)}
-              rows={2}
-              placeholder="此藥引致昏睡，服藥後避免駕駛。"
-              className="input-modern px-3.5 resize-none"
+              onChange={(v) => update('default_precautions', v)}
+              commonPrecautions={templates}
             />
           </div>
 

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Drug } from '../types';
+import type { Drug, WarningTemplate } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -59,4 +59,49 @@ export async function fetchDefaultsByGeneric(genericName: string): Promise<Drug 
 /** Check if Supabase is configured */
 export function isSupabaseConfigured(): boolean {
   return !!(supabaseUrl && supabaseAnonKey);
+}
+
+/* ─── Warning Template CRUD ─────────────────────────── */
+
+export async function fetchWarningTemplates(): Promise<WarningTemplate[]> {
+  const { data, error } = await supabase
+    .from('warning_templates')
+    .select('*')
+    .order('id', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createWarningTemplate(
+  template: Pick<WarningTemplate, 'text'>,
+): Promise<WarningTemplate> {
+  const { data, error } = await supabase
+    .from('warning_templates')
+    .insert([template])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateWarningTemplate(
+  id: number,
+  template: Pick<WarningTemplate, 'text'>,
+): Promise<WarningTemplate> {
+  const { data, error } = await supabase
+    .from('warning_templates')
+    .update(template)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteWarningTemplate(id: number): Promise<void> {
+  const { error } = await supabase
+    .from('warning_templates')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
 }

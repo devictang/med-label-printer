@@ -1,19 +1,21 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import DispenseLabelsPage from './pages/DispenseLabels';
-import DrugDatabasePage from './pages/DrugDatabase';
-import PharmacyProfilePage from './pages/PharmacyProfile';
-import LabelSettingsPage from './pages/LabelSettings';
+import DispenseLabels from './pages/DispenseLabels';
+import DrugDatabase from './pages/DrugDatabase';
+import WarningTemplates from './pages/WarningTemplates';
+import PharmacyProfile from './pages/PharmacyProfile';
+import LabelSettings from './pages/LabelSettings';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<DispenseLabelsPage />} />
-          <Route path="/drugs" element={<DrugDatabasePage />} />
-          <Route path="/profile" element={<PharmacyProfilePage />} />
-          <Route path="/settings" element={<LabelSettingsPage />} />
+          <Route path="/" element={<DispenseLabels />} />
+          <Route path="/drugs" element={<DrugDatabase />} />
+          <Route path="/warnings" element={<WarningTemplates />} />
+          <Route path="/profile" element={<PharmacyProfile />} />
+          <Route path="/settings" element={<LabelSettings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

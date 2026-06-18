@@ -4,7 +4,7 @@ export interface PharmacyProfile {
   address: string;
 }
 
-/** Drug record from Supabase */
+/** A drug record from Supabase */
 export interface Drug {
   id?: number;
   created_at?: string;
@@ -17,6 +17,13 @@ export interface Drug {
   default_precautions: string; // default precautions/warnings
 }
 
+/** A reusable warning template managed from the Warning Templates page */
+export interface WarningTemplate {
+  id?: number;
+  created_at?: string;
+  text: string;
+}
+
 /** A single label to print */
 export interface LabelItem {
   patientName: string;
@@ -24,6 +31,7 @@ export interface LabelItem {
   pharmacy: PharmacyProfile;
   drug: Drug;
   customUsage?: string;
+  /** Newline-separated precautions. Each line is one item, max 3. */
   customPrecautions?: string;
 }
 

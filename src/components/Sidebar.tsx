@@ -4,11 +4,13 @@ import {
   HiOutlineCircleStack,
   HiOutlineUser,
   HiOutlineCog6Tooth,
+  HiOutlineShieldExclamation,
 } from 'react-icons/hi2';
 
 const navItems = [
   { to: '/', label: '配發標籤', icon: HiOutlineDocumentText },
   { to: '/drugs', label: '藥物數據庫', icon: HiOutlineCircleStack },
+  { to: '/warnings', label: '注意事項模板', icon: HiOutlineShieldExclamation },
   { to: '/profile', label: '藥房資料', icon: HiOutlineUser },
   { to: '/settings', label: '標籤設定', icon: HiOutlineCog6Tooth },
 ];
