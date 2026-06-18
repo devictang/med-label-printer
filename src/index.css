@@ -2,27 +2,36 @@
 
 @theme {
   --font-sans: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
-  --color-primary-50: #ecfeff;
-  --color-primary-100: #cffafe;
-  --color-primary-200: #a5f3fc;
-  --color-primary-300: #67e8f9;
-  --color-primary-400: #22d3ee;
-  --color-primary-500: #06b6d4;
-  --color-primary-600: #0891b2;
-  --color-primary-700: #0e7490;
-  --color-primary-800: #155e75;
-  --color-primary-900: #164e63;
-  --color-primary-950: #083344;
-  --color-accent-50: #f0fdf4;
-  --color-accent-100: #dcfce7;
-  --color-accent-200: #bbf7d0;
-  --color-accent-300: #86efac;
-  --color-accent-400: #4ade80;
-  --color-accent-500: #22c55e;
-  --color-accent-600: #16a34a;
-  --color-accent-700: #15803d;
-  --color-accent-800: #166534;
-  --color-accent-900: #14532d;
+
+  /* Professional medical blue palette — cleaner & more vibrant */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-primary-950: #1e1b4b;
+
+  /* Medical emerald accent */
+  --color-accent-50: #ecfdf5;
+  --color-accent-100: #d1fae5;
+  --color-accent-200: #a7f3d0;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+  --color-accent-600: #059669;
+  --color-accent-700: #047857;
+  --color-accent-800: #065f46;
+
+  /* Softer sidebar */
+  --color-sidebar: #0a0e1a;
+  --color-sidebar-hover: #141b2d;
+  --color-sidebar-active: #1a2240;
+  --color-surface: #ffffff;
 }
 
 * {
@@ -39,41 +48,150 @@ html {
 body {
   font-family: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
   background-color: #f1f5f9;
-  color: #1e293b;
+  color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+/* Subtle background pattern */
+.bg-subtle-pattern {
+  background-color: #f1f5f9;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(99, 102, 241, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 50%);
 }
 
-/* Print styles */
+/* Glass sidebar effect */
+.sidebar-glass {
+  background: linear-gradient(180deg, #0a0e1a 0%, #0d1225 40%, #0a0e1a 100%);
+}
+
+/* Modern card with subtle glow */
+.card-modern {
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+.card-modern:hover {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* Elevated card */
+.card-elevated {
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+}
+
+/* Input styling */
+.input-modern {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  color: #0f172a;
+  transition: all 0.15s ease;
+  outline: none;
+}
+.input-modern:focus {
+  border-color: #818cf8;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.input-modern::placeholder {
+  color: #94a3b8;
+}
+
+/* Modern button base */
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.625rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Print */
 @media print {
-  body {
-    background: white !important;
-  }
-  .no-print {
-    display: none !important;
-  }
+  body { background: white !important; }
+  .no-print { display: none !important; }
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-fade-in-up { animation: fadeInUp 0.35s ease-out; }
+.animate-scale-in { animation: scaleIn 0.2s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.2s ease-out; }
+
+/* Staggered children */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.35s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+
+/* Skeleton loading shimmer */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* Modal backdrop blur */
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
 }

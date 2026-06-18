@@ -7,6 +7,8 @@ import {
   HiOutlineExclamationTriangle,
   HiOutlineCheckCircle,
   HiOutlineXMark,
+  HiOutlineCircleStack,
+  HiOutlineTableCells,
 } from 'react-icons/hi2';
 import { fetchDrugs, createDrug, updateDrug, deleteDrug } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -44,10 +46,7 @@ export default function DrugDatabasePage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadDrugs();
-  }, [loadDrugs]);
-
+  useEffect(() => { loadDrugs(); }, [loadDrugs]);
   useEffect(() => {
     const timer = setTimeout(() => {
       if (search) loadDrugs(search);
@@ -103,19 +102,22 @@ export default function DrugDatabasePage() {
   const supabaseOk = isSupabaseConfigured();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">藥物數據庫</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            管理藥劑製品資料，包括名稱、成分、劑量及預設用法。
-          </p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <HiOutlineCircleStack className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">藥物數據庫</h2>
+            <p className="text-sm text-slate-400 mt-0.5">管理藥劑製品資料，包括名稱、成分、劑量及預設用法。</p>
+          </div>
         </div>
         <button
           onClick={openCreate}
           disabled={!supabaseOk}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 text-white text-sm font-medium rounded-lg transition-colors"
+          className="btn-modern bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <HiOutlinePlusCircle className="w-4 h-4" />
           新增藥物
@@ -124,95 +126,164 @@ export default function DrugDatabasePage() {
 
       {/* Supabase not configured warning */}
       {!supabaseOk && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <HiOutlineExclamationTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <div className="bg-amber-50/80 border border-amber-200/70 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <HiOutlineExclamationTriangle className="w-4 h-4 text-amber-600" />
+          </div>
           <div>
-            <p className="text-sm font-medium text-amber-800">尚未設定 Supabase</p>
-            <p className="text-xs text-amber-700 mt-0.5">
+            <p className="text-sm font-semibold text-amber-800">尚未設定 Supabase</p>
+            <p className="text-xs text-amber-600/80 mt-0.5">
               請在專案根目錄建立 <code className="bg-amber-100 px-1 rounded">.env</code> 檔案，並設定{' '}
               <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_URL</code> 及{' '}
               <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>。
-              設定完成後重新整理頁面即可使用。
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Stats bar */}
+      {supabaseOk && !loading && !error && (
+        <div className="card-elevated px-5 py-3 flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <HiOutlineCircleStack className="w-4 h-4 text-indigo-400" />
+            共 <strong className="text-slate-800">{drugs.length}</strong> 種藥物
+          </div>
+          {drugs.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-slate-200" />
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <HiOutlineTableCells className="w-4 h-4 text-indigo-400" />
+                <span className="text-slate-400">
+                  {drugs.filter((d) => d.default_usage).length} 種有預設用法
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* Search */}
       {supabaseOk && (
         <div className="relative">
-          <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <HiOutlineMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜尋藥物名稱或成分…"
-            className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 shadow-sm"
+            className="input-modern pl-10"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-300 hover:text-slate-500"
+            >
+              <HiOutlineXMark className="w-4 h-4" />
+            </button>
+          )}
         </div>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="text-center py-12 text-slate-400 text-sm">載入中…</div>
+        <div className="card-elevated p-6">
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex gap-4">
+                <div className="skeleton h-5 flex-1" />
+                <div className="skeleton h-5 w-24" />
+                <div className="skeleton h-5 w-20" />
+                <div className="skeleton h-5 w-32" />
+                <div className="skeleton h-5 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div className="bg-red-50/80 border border-red-200/70 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
+          <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+            <HiOutlineExclamationTriangle className="w-4 h-4 text-red-600" />
+          </div>
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
       {/* Drug table */}
       {!loading && supabaseOk && drugs.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <HiOutlinePlusCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 text-sm">尚未加入任何藥物</p>
-          <p className="text-slate-400 text-xs mt-1">點擊「新增藥物」開始建立數據庫</p>
+        <div className="card-elevated px-12 py-16 text-center animate-fade-in-up">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <HiOutlinePlusCircle className="w-8 h-8 text-indigo-300" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-700 mb-1">尚未加入任何藥物</h3>
+          <p className="text-sm text-slate-400 mb-4">點擊「新增藥物」開始建立數據庫</p>
+          <button
+            onClick={openCreate}
+            className="btn-modern bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md"
+          >
+            <HiOutlinePlusCircle className="w-4 h-4" />
+            新增藥物
+          </button>
         </div>
       )}
 
       {!loading && supabaseOk && drugs.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="card-elevated overflow-hidden animate-fade-in-up">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="px-4 py-3">品牌名稱</th>
-                  <th className="px-4 py-3">成分 ( Generic )</th>
-                  <th className="px-4 py-3">HK 編號</th>
-                  <th className="px-4 py-3">劑量</th>
-                  <th className="px-4 py-3">預設用法</th>
-                  <th className="px-4 py-3 w-20">操作</th>
+                <tr className="bg-slate-50/80 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="px-4 py-3.5 pl-5">品牌名稱</th>
+                  <th className="px-4 py-3.5">成分</th>
+                  <th className="px-4 py-3.5">HK 編號</th>
+                  <th className="px-4 py-3.5">劑量</th>
+                  <th className="px-4 py-3.5">預設用法</th>
+                  <th className="px-4 py-3.5 pr-5 w-20 text-right">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {drugs.map((drug) => (
-                  <tr key={drug.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-800">{drug.brand_name}</td>
-                    <td className="px-4 py-3 text-slate-600">{drug.generic_name}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-block bg-sky-50 text-sky-700 text-xs font-mono px-2 py-0.5 rounded">
+                  <tr
+                    key={drug.id}
+                    className="hover:bg-indigo-50/30 transition-colors"
+                  >
+                    <td className="px-4 py-3.5 pl-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-indigo-600">{drug.brand_name.charAt(0) || drug.generic_name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-800">{drug.brand_name || drug.generic_name}</p>
+                          {drug.brand_name && (
+                            <p className="text-[10px] text-slate-400">{drug.generic_name}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-600">{drug.generic_name}</td>
+                    <td className="px-4 py-3.5">
+                      <span className="inline-block bg-indigo-50 text-indigo-600 text-[10px] font-mono font-medium px-2 py-0.5 rounded-md border border-indigo-100">
                         {drug.hk_number}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{drug.dosage}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs max-w-[200px] truncate">
-                      {drug.default_usage}
+                    <td className="px-4 py-3.5 text-slate-600 font-medium">{drug.dosage}</td>
+                    <td className="px-4 py-3.5 text-slate-400 text-xs max-w-[220px] truncate">
+                      {drug.default_usage || <span className="italic text-slate-300">無預設</span>}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
+                    <td className="px-4 py-3.5 pr-5">
+                      <div className="flex items-center justify-end gap-0.5">
                         <button
                           onClick={() => openEdit(drug)}
-                          className="p-1.5 rounded-md text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                          className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
                           title="編輯"
                         >
                           <HiOutlinePencilSquare className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(drug)}
-                          className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
                           title="刪除"
                         >
                           <HiOutlineTrash className="w-4 h-4" />
@@ -246,10 +317,10 @@ export default function DrugDatabasePage() {
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-fade-in ${
+          className={`fixed bottom-6 right-6 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg shadow-slate-200/50 text-sm font-medium animate-fade-in-up z-50 ${
             toast.type === 'success'
-              ? 'bg-green-600 text-white'
-              : 'bg-red-600 text-white'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-red-500 text-white'
           }`}
         >
           {toast.type === 'success' ? (

@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 
 export default function Layout() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-subtle-pattern">
       <Sidebar />
       <main className="ml-60 min-h-screen">
         <div className="px-8 py-6 max-w-6xl mx-auto animate-fade-in">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HiOutlineXMark } from 'react-icons/hi2';
+import { HiOutlineXMark, HiOutlineBeaker, HiOutlineCheckCircle } from 'react-icons/hi2';
 import type { Drug } from '../types';
 
 interface Props {
@@ -19,21 +19,10 @@ const emptyForm = {
 };
 
 const COMMON_GENERICS = [
-  'Paracetamol',
-  'Ibuprofen',
-  'Amoxicillin',
-  'Omeprazole',
-  'Metformin',
-  'Atorvastatin',
-  'Lisinopril',
-  'Amlodipine',
-  'Salbutamol',
-  'Cetirizine',
-  'Loratadine',
-  'Aspirin',
-  'Diclofenac',
-  'Prednisolone',
-  'Furosemide',
+  'Paracetamol', 'Ibuprofen', 'Amoxicillin', 'Omeprazole',
+  'Metformin', 'Atorvastatin', 'Lisinopril', 'Amlodipine',
+  'Salbutamol', 'Cetirizine', 'Loratadine', 'Aspirin',
+  'Diclofenac', 'Prednisolone', 'Furosemide',
 ];
 
 const USAGE_PRESETS: Record<string, { usage: string; precautions: string }> = {
@@ -77,6 +66,7 @@ const USAGE_PRESETS: Record<string, { usage: string; precautions: string }> = {
 
 export default function DrugFormModal({ drug, onSave, onClose }: Props) {
   const [form, setForm] = useState({ ...emptyForm });
+  const isEditing = !!drug;
 
   useEffect(() => {
     if (drug) {
@@ -101,12 +91,9 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
   const handleGenericSelect = (name: string) => {
     update('generic_name', name);
     const preset = USAGE_PRESETS[name];
-    if (preset) {
-      // Only auto-fill if creating new (not editing)
-      if (!drug) {
-        update('default_usage', preset.usage);
-        update('default_precautions', preset.precautions);
-      }
+    if (preset && !isEditing) {
+      update('default_usage', preset.usage);
+      update('default_precautions', preset.precautions);
     }
   };
 
@@ -116,16 +103,26 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800">
-            {drug ? '編輯藥物' : '新增藥物'}
-          </h3>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
+              <HiOutlineBeaker className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">
+                {isEditing ? '編輯藥物' : '新增藥物'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {isEditing ? '修改藥物資料及預設用法' : '加入新藥物到數據庫'}
+              </p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
             <HiOutlineXMark className="w-5 h-5" />
           </button>
@@ -135,109 +132,126 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">成分 (Generic Name) *</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={form.generic_name}
-                  onChange={(e) => handleGenericSelect(e.target.value)}
-                  list="generic-list"
-                  placeholder="e.g. Paracetamol"
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
-                />
-                <datalist id="generic-list">
-                  {COMMON_GENERICS.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-0.5">選擇或輸入 generic name 會自動填入預設用法</p>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                成分 (Generic Name) <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.generic_name}
+                onChange={(e) => handleGenericSelect(e.target.value)}
+                list="generic-list"
+                placeholder="e.g. Paracetamol"
+                required
+                className="input-modern"
+              />
+              <datalist id="generic-list">
+                {COMMON_GENERICS.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+              {!isEditing && (
+                <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                  <HiOutlineCheckCircle className="w-3 h-3" />
+                  選擇 generic name 會自動填入預設用法
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">品牌名稱 (Brand Name)</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                品牌名稱
+              </label>
               <input
                 type="text"
                 value={form.brand_name}
                 onChange={(e) => update('brand_name', e.target.value)}
                 placeholder="e.g. Panadol"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                className="input-modern"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">HK 註冊編號 *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                HK 註冊編號 <span className="text-red-400">*</span>
+              </label>
               <input
                 type="text"
                 value={form.hk_number}
                 onChange={(e) => update('hk_number', e.target.value)}
                 placeholder="e.g. HK-65432"
                 required
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                className="input-modern"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">劑量 *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                劑量 <span className="text-red-400">*</span>
+              </label>
               <input
                 type="text"
                 value={form.dosage}
                 onChange={(e) => update('dosage', e.target.value)}
                 placeholder="e.g. 500mg"
                 required
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+                className="input-modern"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">藥物成分 (Active Ingredient)</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              藥物成分
+            </label>
             <input
               type="text"
               value={form.ingredient}
               onChange={(e) => update('ingredient', e.target.value)}
               placeholder="e.g. Paracetamol 500mg, Caffeine 65mg"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+              className="input-modern"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">預設用量及用法</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              預設用量及用法
+            </label>
             <textarea
               value={form.default_usage}
               onChange={(e) => update('default_usage', e.target.value)}
               rows={2}
               placeholder="每日 3 次，每次 1 粒，餐後服用"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-none"
+              className="input-modern resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">預設注意事項</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+              預設注意事項
+            </label>
             <textarea
               value={form.default_precautions}
               onChange={(e) => update('default_precautions', e.target.value)}
               rows={2}
               placeholder="此藥引致昏睡，服藥後避免駕駛。"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 resize-none"
+              className="input-modern resize-none"
             />
           </div>
 
           {/* Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"
+              className="btn-modern bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
             >
               取消
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="btn-modern bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20"
             >
-              {drug ? '更新藥物' : '新增藥物'}
+              {isEditing ? '更新藥物' : '新增藥物'}
             </button>
           </div>
         </form>

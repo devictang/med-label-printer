@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { HiOutlineArrowPath } from 'react-icons/hi2';
+import {
+  HiOutlineArrowPath,
+  HiOutlineCog6Tooth,
+  HiOutlineCheckCircle,
+  HiOutlineScale,
+} from 'react-icons/hi2';
 import { saveGridConfig } from '../lib/storage';
 import type { LabelGridConfig } from '../types';
 import { DEFAULT_GRID, PRESET_GRIDS } from '../types';
@@ -40,45 +45,72 @@ export default function LabelSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">標籤設定</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          設定標籤紙的格式，令列印位置準確對應你的標籤紙。
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <HiOutlineCog6Tooth className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">標籤設定</h2>
+          <p className="text-sm text-slate-400 mt-0.5">
+            設定標籤紙的格式，令列印位置準確對應你的標籤紙。
+          </p>
+        </div>
       </div>
 
       {/* Presets */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">常用格式預設</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-          {PRESET_GRIDS.map((preset) => {
-            const isActive =
-              config.cols === preset.config.cols &&
-              config.rows === preset.config.rows;
-            return (
-              <button
-                key={preset.name}
-                onClick={() => applyPreset(preset.config)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                  isActive
-                    ? 'bg-primary-50 border-primary-300 text-primary-700'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                {preset.name}
-              </button>
-            );
-          })}
+      <div className="card-elevated overflow-hidden animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center">
+            <HiOutlineCheckCircle className="w-3.5 h-3.5 text-indigo-600" />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-700">常用格式預設</h3>
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {PRESET_GRIDS.map((preset) => {
+              const isActive =
+                config.cols === preset.config.cols &&
+                config.rows === preset.config.rows;
+              return (
+                <button
+                  key={preset.name}
+                  onClick={() => applyPreset(preset.config)}
+                  className={`relative px-3 py-3 rounded-xl text-xs font-medium border transition-all ${
+                    isActive
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
+                  }`}
+                >
+                  {isActive && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center">
+                      <HiOutlineCheckCircle className="w-2.5 h-2.5 text-white" />
+                    </span>
+                  )}
+                  <span className="block font-semibold">{preset.name}</span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">
+                    {preset.config.cols}×{preset.config.rows} · {preset.config.labelWidth}×{preset.config.labelHeight}mm
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Manual config */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-700">詳細設定</h3>
-          <p className="text-xs text-slate-400 mt-0.5">所有數值單位為毫米 (mm)</p>
+      <div className="card-elevated overflow-hidden animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center">
+              <HiOutlineScale className="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">詳細設定</h3>
+              <p className="text-[10px] text-slate-400">所有數值單位為毫米 (mm)</p>
+            </div>
+          </div>
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -94,7 +126,7 @@ export default function LabelSettingsPage() {
           <Field label="垂直間距" value={config.gapY} onChange={(v) => update('gapY', v)} min={0} max={20} step={0.5} />
         </div>
 
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <button
             onClick={resetToDefault}
             className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
@@ -104,51 +136,64 @@ export default function LabelSettingsPage() {
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+            className={`btn-modern transition-all ${
+              saved
+                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                : 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20'
+            }`}
           >
-            {saved ? '✓ 已儲存' : '儲存設定'}
+            {saved ? (
+              <>
+                <HiOutlineCheckCircle className="w-4 h-4" />
+                已儲存
+              </>
+            ) : (
+              '儲存設定'
+            )}
           </button>
         </div>
       </div>
 
-      {/* Preview */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">版面預覽</h3>
-        <div className="aspect-[210/297] max-w-xs bg-white border border-slate-300 rounded-lg mx-auto p-2 relative overflow-hidden">
-          {/* A4 preview */}
-          <svg viewBox="0 0 210 297" className="w-full h-full">
-            <rect x="0" y="0" width="210" height="297" fill="white" stroke="#d1d5db" strokeWidth="0.5" />
-
-            {/* Label grid */}
-            {Array.from({ length: config.rows * config.cols }, (_, i) => {
-              const col = i % config.cols;
-              const row = Math.floor(i / config.cols);
-              const x = config.marginLeft + col * (config.labelWidth + config.gapX);
-              const y = config.marginTop + row * (config.labelHeight + config.gapY);
-              return (
-                <rect
-                  key={i}
-                  x={x}
-                  y={y}
-                  width={config.labelWidth}
-                  height={config.labelHeight}
-                  fill="#f0f9ff"
-                  stroke="#0e7490"
-                  strokeWidth="0.3"
-                  rx="0.5"
-                />
-              );
-            })}
-
-            {/* Dimensions label */}
-            <text x="105" y="10" textAnchor="middle" fontSize="3" fill="#9ca3af">
-              A4 (210 × 297 mm)
-            </text>
-          </svg>
+      {/* Visual preview */}
+      <div className="card-elevated overflow-hidden animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="text-sm font-semibold text-slate-700">版面預覽</h3>
         </div>
-        <p className="text-center text-xs text-slate-400 mt-2">
-          每頁 {config.cols * config.rows} 格 · 每個標籤 {config.labelWidth} × {config.labelHeight} mm
-        </p>
+        <div className="p-6">
+          <div className="aspect-[210/297] max-w-xs bg-white border border-slate-200 rounded-xl mx-auto p-3 relative overflow-hidden shadow-inner">
+            <svg viewBox="0 0 210 297" className="w-full h-full">
+              <rect x="0" y="0" width="210" height="297" fill="white" stroke="#e2e8f0" strokeWidth="0.5" />
+
+              {/* Label grid */}
+              {Array.from({ length: config.rows * config.cols }, (_, i) => {
+                const col = i % config.cols;
+                const row = Math.floor(i / config.cols);
+                const x = config.marginLeft + col * (config.labelWidth + config.gapX);
+                const y = config.marginTop + row * (config.labelHeight + config.gapY);
+                return (
+                  <rect
+                    key={i}
+                    x={x}
+                    y={y}
+                    width={config.labelWidth}
+                    height={config.labelHeight}
+                    fill="rgba(99, 102, 241, 0.06)"
+                    stroke="rgba(99, 102, 241, 0.4)"
+                    strokeWidth="0.3"
+                    rx="0.5"
+                  />
+                );
+              })}
+
+              <text x="105" y="8" textAnchor="middle" fontSize="2.5" fill="#94a3b8" fontFamily="Inter, sans-serif">
+                A4 (210 × 297 mm)
+              </text>
+            </svg>
+          </div>
+          <p className="text-center text-xs text-slate-400 mt-3 font-medium">
+            每頁 {config.cols * config.rows} 格 · 每個標籤 {config.labelWidth} × {config.labelHeight} mm
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -171,7 +216,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+        {label}
+      </label>
       <div className="flex items-center gap-2">
         <input
           type="number"
@@ -183,9 +230,9 @@ function Field({
           min={min}
           max={max}
           step={step || 1}
-          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500"
+          className="input-modern"
         />
-        <span className="text-xs text-slate-400 w-6">mm</span>
+        <span className="text-xs text-slate-400 w-5 font-medium">mm</span>
       </div>
     </div>
   );
