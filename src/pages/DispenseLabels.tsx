@@ -11,7 +11,6 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlineChevronDown,
   HiOutlineCheck,
-  HiOutlineClock,
   HiOutlineDocumentText,
 } from 'react-icons/hi2';
 import { loadProfile } from '../lib/storage';
@@ -87,7 +86,7 @@ export default function DispenseLabelsPage() {
 
   const selectDrug = (rowId: string, drug: Drug) => {
     setRows((prev) =>
-      prev.map((r) => (r.id === rowId ? { ...r, selectedDrug: drug } : r)),
+      prev.map((r) => (r.id === rowId ? { ...r, selectedDrug: drug, customUsage: drug.default_usage || '', customPrecautions: drug.default_precautions || '' } : r)),
     );
     setShowDrugPicker(null);
     setPickerPos(null);
@@ -350,43 +349,25 @@ export default function DispenseLabelsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 border-t border-slate-100">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                      用法 <span className="text-slate-300 font-normal normal-case">(可修改)</span>
+                      用法 <span className="text-slate-300 font-normal normal-case">(直接修改)</span>
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={row.customUsage}
-                        onChange={(e) => updateRow(row.id, 'customUsage', e.target.value)}
-                        placeholder={row.selectedDrug.default_usage || '自訂用法'}
-                        className="input-modern px-3.5"
-                      />
-                    </div>
-                    {!row.customUsage && row.selectedDrug.default_usage && (
-                      <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-                        <HiOutlineClock className="w-3 h-3" />
-                        預設: {row.selectedDrug.default_usage}
-                      </p>
-                    )}
+                    <textarea
+                      value={row.customUsage}
+                      onChange={(e) => updateRow(row.id, 'customUsage', e.target.value)}
+                      rows={2}
+                      className="input-modern px-3.5 resize-none"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                      注意事項 <span className="text-slate-300 font-normal normal-case">(可修改)</span>
+                      注意事項 <span className="text-slate-300 font-normal normal-case">(直接修改，每行一項)</span>
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={row.customPrecautions}
-                        onChange={(e) => updateRow(row.id, 'customPrecautions', e.target.value)}
-                        placeholder={row.selectedDrug.default_precautions || '自訂注意事項'}
-                        className="input-modern px-3.5"
-                      />
-                    </div>
-                    {!row.customPrecautions && row.selectedDrug.default_precautions && (
-                      <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-                        <HiOutlineClock className="w-3 h-3" />
-                        預設: {row.selectedDrug.default_precautions}
-                      </p>
-                    )}
+                    <textarea
+                      value={row.customPrecautions}
+                      onChange={(e) => updateRow(row.id, 'customPrecautions', e.target.value)}
+                      rows={3}
+                      className="input-modern px-3.5 resize-none"
+                    />
                   </div>
                 </div>
               )}

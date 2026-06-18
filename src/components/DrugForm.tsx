@@ -227,7 +227,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-              預設注意事項
+              預設注意事項 <span className="text-slate-300 font-normal normal-case">(每行一項)</span>
             </label>
             <textarea
               value={form.default_precautions}
