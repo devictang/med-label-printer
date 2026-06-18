@@ -12,6 +12,7 @@ import {
 } from 'react-icons/hi2';
 import { fetchDrugs, createDrug, updateDrug, deleteDrug } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { formatIngredientsDisplay } from '../components/IngredientEditor';
 import type { Drug } from '../types';
 import DrugFormModal from '../components/DrugForm';
 
@@ -79,7 +80,7 @@ export default function DrugDatabasePage() {
   };
 
   const handleDelete = async (drug: Drug) => {
-    if (!confirm(`確定刪除「${drug.brand_name || drug.generic_name}」？`)) return;
+    if (!confirm(`確定刪除「${drug.brand_name}」？`)) return;
     try {
       await deleteDrug(drug.id!);
       showToast('success', '藥物已刪除');
@@ -236,9 +237,8 @@ export default function DrugDatabasePage() {
               <thead>
                 <tr className="bg-slate-50/80 text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                   <th className="px-4 py-3.5 pl-5">品牌名稱</th>
-                  <th className="px-4 py-3.5">成分</th>
+                  <th className="px-4 py-3.5">藥物成分</th>
                   <th className="px-4 py-3.5">HK 編號</th>
-                  <th className="px-4 py-3.5">劑量</th>
                   <th className="px-4 py-3.5">預設用法</th>
                   <th className="px-4 py-3.5 pr-5 w-20 text-right">操作</th>
                 </tr>
@@ -252,23 +252,21 @@ export default function DrugDatabasePage() {
                     <td className="px-4 py-3.5 pl-5">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-[10px] font-bold text-indigo-600">{drug.brand_name.charAt(0) || drug.generic_name.charAt(0)}</span>
+                          <span className="text-[10px] font-bold text-indigo-600">{drug.brand_name.charAt(0)}</span>
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-800">{drug.brand_name || drug.generic_name}</p>
-                          {drug.brand_name && (
-                            <p className="text-[10px] text-slate-400">{drug.generic_name}</p>
-                          )}
+                          <p className="font-semibold text-slate-800">{drug.brand_name}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600">{drug.generic_name}</td>
+                    <td className="px-4 py-3.5 text-slate-600 text-xs">
+                      {formatIngredientsDisplay(drug.ingredient) || <span className="italic text-slate-300">無</span>}
+                    </td>
                     <td className="px-4 py-3.5">
                       <span className="inline-block bg-indigo-50 text-indigo-600 text-[10px] font-mono font-medium px-2 py-0.5 rounded-md border border-indigo-100">
                         {drug.hk_number}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600 font-medium">{drug.dosage}</td>
                     <td className="px-4 py-3.5 text-slate-400 text-xs max-w-[220px] truncate">
                       {drug.default_usage || <span className="italic text-slate-300">無預設</span>}
                     </td>

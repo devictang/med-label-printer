@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { formatIngredientsDisplay } from '../components/IngredientEditor';
 import type { LabelItem, LabelGridConfig } from '../types';
 
 const A4_WIDTH = 210;  // mm
@@ -57,17 +58,18 @@ function drawLabel(
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(7);
   doc.setTextColor(0, 50, 80);
-  const drugLine = item.drug.brand_name
-    ? `${item.drug.brand_name} (${item.drug.generic_name})`
-    : item.drug.generic_name;
+  const drugLine = item.drug.brand_name;
   const truncatedDrug = drugLine.length > 38 ? drugLine.slice(0, 36) + '…' : drugLine;
   doc.text(truncatedDrug, cx, cy + 13.5);
 
-  // --- Dosage ---
+  // --- Ingredient(s) ---
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(6);
   doc.setTextColor(50, 50, 50);
-  doc.text(`劑量: ${item.drug.dosage}`, cx, cy + 18);
+  const ingText = item.drug.ingredient
+    ? formatIngredientsDisplay(item.drug.ingredient)
+    : '';
+  if (ingText) doc.text(ingText, cx, cy + 18);
 
   // --- Usage ---
   doc.setFontSize(5.5);

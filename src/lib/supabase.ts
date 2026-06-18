@@ -7,10 +7,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /** Fetch all drugs, optionally filtered by generic name */
-export async function fetchDrugs(genericName?: string): Promise<Drug[]> {
-  let query = supabase.from('drugs').select('*').order('generic_name', { ascending: true });
-  if (genericName) {
-    query = query.ilike('generic_name', `%${genericName}%`);
+export async function fetchDrugs(brandName?: string): Promise<Drug[]> {
+  let query = supabase.from('drugs').select('*').order('brand_name', { ascending: true });
+  if (brandName) {
+    query = query.or(`brand_name.ilike.%${brandName}%,ingredient.ilike.%${brandName}%`);
   }
   const { data, error } = await query;
   if (error) throw error;
@@ -44,12 +44,12 @@ export async function deleteDrug(id: number): Promise<void> {
   if (error) throw error;
 }
 
-/** Fetch default values for a generic drug name */
-export async function fetchDefaultsByGeneric(genericName: string): Promise<Drug | null> {
+/** Fetch default values for a drug by brand name */
+export async function fetchDefaultsByBrand(brandName: string): Promise<Drug | null> {
   const { data, error } = await supabase
     .from('drugs')
     .select('*')
-    .ilike('generic_name', genericName)
+    .ilike('brand_name', brandName)
     .limit(1)
     .maybeSingle();
   if (error) throw error;

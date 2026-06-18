@@ -124,7 +124,6 @@ export default function DispenseLabelsPage() {
     return drugs.filter(
       (d) =>
         d.brand_name.toLowerCase().includes(q) ||
-        d.generic_name.toLowerCase().includes(q) ||
         d.ingredient.toLowerCase().includes(q) ||
         d.hk_number.toLowerCase().includes(q),
     );
@@ -310,12 +309,10 @@ export default function DispenseLabelsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-indigo-800">
-                            {row.selectedDrug.brand_name || row.selectedDrug.generic_name}
+                            {row.selectedDrug.brand_name}
                           </p>
                           <p className="text-xs text-indigo-500/80">
-                            {row.selectedDrug.generic_name}
-                            <span className="mx-1">·</span>
-                            {row.selectedDrug.dosage}
+                            {formatIngredientsDisplay(row.selectedDrug.ingredient)}
                             {row.selectedDrug.hk_number && (
                               <>
                                 <span className="mx-1">·</span>
@@ -430,10 +427,7 @@ export default function DispenseLabelsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-sm font-semibold text-slate-800 group-hover:text-indigo-700 transition-colors">
-                        {drug.brand_name || drug.generic_name}
-                      </span>
-                      <span className="text-xs text-slate-400 ml-2">
-                        {drug.dosage}
+                        {drug.brand_name}
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono">
@@ -441,9 +435,7 @@ export default function DispenseLabelsPage() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                    {drug.generic_name}
-                    <span className="text-slate-300">·</span>
-                    {formatIngredientsDisplay(drug.ingredient) || drug.generic_name}
+                    {formatIngredientsDisplay(drug.ingredient) || drug.brand_name}
                   </p>
                 </button>
               ))
