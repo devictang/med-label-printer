@@ -37,6 +37,7 @@ interface LabelRow {
   customUsage: string;
   customPrecautions: string;
   copies: number;
+  copiesText: string; // interim string for editable number input
 }
 
 let rowIdCounter = 0;
@@ -52,6 +53,7 @@ function createEmptyRow(): LabelRow {
     customUsage: '',
     customPrecautions: '',
     copies: 1,
+    copiesText: '1',
   };
 }
 
@@ -281,10 +283,16 @@ export default function DispenseLabelsPage() {
                       type="number"
                       min={1}
                       max={999}
-                      value={row.copies}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value) || 1;
-                        updateRow(row.id, 'copies', Math.max(1, Math.min(999, v)));
+                      value={row.copiesText}
+                      onChange={(e) => updateRow(row.id, 'copiesText', e.target.value)}
+                      onBlur={() => {
+                        const v = parseInt(row.copiesText, 10);
+                        if (!isNaN(v) && v >= 1 && v <= 999) {
+                          updateRow(row.id, 'copies', v);
+                        } else {
+                          // revert
+                          updateRow(row.id, 'copiesText', String(row.copies));
+                        }
                       }}
                       className="w-10 px-1 py-0.5 bg-white border border-slate-200 rounded-md text-xs text-center text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-400"
                     />

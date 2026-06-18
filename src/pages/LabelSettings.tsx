@@ -228,6 +228,27 @@ function Field({
   max: number;
   step?: number;
 }) {
+  const [text, setText] = useState(() => String(value));
+
+  // Sync from parent when value changes externally
+  useEffect(() => {
+    setText(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const trimmed = text.trim();
+    if (trimmed === '') {
+      setText(String(value)); // revert to last valid
+      return;
+    }
+    const v = parseFloat(trimmed);
+    if (!isNaN(v)) {
+      onChange(Math.min(max, Math.max(min, v)));
+    } else {
+      setText(String(value)); // revert invalid
+    }
+  };
+
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
@@ -236,10 +257,11 @@ function Field({
       <div className="flex items-center gap-2">
         <input
           type="number"
-          value={value}
-          onChange={(e) => {
-            const v = parseFloat(e.target.value);
-            if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)));
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
           }}
           min={min}
           max={max}

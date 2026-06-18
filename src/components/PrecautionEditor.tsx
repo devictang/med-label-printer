@@ -46,26 +46,16 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
     if (remaining <= 0) return;
     const rect = inputRef.current?.getBoundingClientRect();
     if (rect) {
-      const pos = {
+      setDropdownPos({
         top: rect.bottom + 6,
         left: rect.left,
         width: rect.width,
-      };
-      console.log('[PrecautionEditor] openDropdown', {
-        pos,
-        inputBottom: rect.bottom,
-        viewportHeight: window.innerHeight,
-        remaining,
       });
-      setDropdownPos(pos);
-    } else {
-      console.warn('[PrecautionEditor] openDropdown — inputRef rect is null');
     }
     setOpen(true);
   };
 
   const closeDropdown = () => {
-    console.log('[PrecautionEditor] closeDropdown');
     setOpen(false);
     setDropdownPos(null);
   };
@@ -178,15 +168,12 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
       {open && remaining > 0 && dropdownPos && createPortal(
         <div
           ref={portalRef}
-          className="fixed z-[9999] animate-scale-in"
+          className="fixed z-50 animate-scale-in"
           style={{
             top: dropdownPos.top,
             left: dropdownPos.left,
             width: dropdownPos.width,
-            outline: '3px solid red',
-            outlineOffset: '2px',
           }}
-          onMouseEnter={() => console.log('[PrecautionEditor] portal — mouseenter')}
         >
           <div className="bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 max-h-56 overflow-y-auto">
             {filteredNotAdded.length === 0 && !showCustomOption && (
