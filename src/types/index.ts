@@ -2,9 +2,6 @@
 export interface PharmacyProfile {
   name: string;
   address: string;
-  phone: string;
-  email: string;
-  licenseNo: string;
 }
 
 /** Drug record from Supabase */

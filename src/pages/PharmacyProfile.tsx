@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   HiOutlineBuildingOffice2,
-  HiOutlinePhone,
-  HiOutlineEnvelope,
   HiOutlineMapPin,
-  HiOutlineIdentification,
   HiOutlineCheckCircle,
   HiOutlineUser,
 } from 'react-icons/hi2';
@@ -14,9 +11,6 @@ import type { PharmacyProfile } from '../types';
 const emptyProfile: PharmacyProfile = {
   name: '',
   address: '',
-  phone: '',
-  email: '',
-  licenseNo: '',
 };
 
 export default function PharmacyProfilePage() {
@@ -26,7 +20,13 @@ export default function PharmacyProfilePage() {
 
   useEffect(() => {
     const existing = loadProfile();
-    if (existing) setProfile(existing);
+    if (existing) {
+      // Migrate: new profile only needs name + address
+      setProfile({
+        name: existing.name || '',
+        address: existing.address || '',
+      });
+    }
     setIsLoaded(true);
   }, []);
 
@@ -41,7 +41,7 @@ export default function PharmacyProfilePage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const hasData = profile.name || profile.address || profile.phone || profile.email || profile.licenseNo;
+  const hasData = profile.name || profile.address;
 
   if (!isLoaded) return null;
 
@@ -55,7 +55,7 @@ export default function PharmacyProfilePage() {
         <div>
           <h2 className="text-xl font-bold text-slate-800">藥房資料</h2>
           <p className="text-sm text-slate-400 mt-0.5">
-            設定你的藥房或診所資料，這些資料會自動填入每一張標籤。
+            設定藥房或診所名稱及地址，這些資料會印在每一張標籤上。
           </p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function PharmacyProfilePage() {
             <div className="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center">
               <HiOutlineBuildingOffice2 className="w-3.5 h-3.5 text-indigo-600" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-700">機構資料</h3>
+            <h3 className="text-sm font-semibold text-slate-700">標籤資料</h3>
           </div>
         </div>
 
@@ -88,38 +88,11 @@ export default function PharmacyProfilePage() {
             placeholder="e.g. 香港九龍旺角彌敦道 123 號"
             multiline
           />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormField
-              icon={HiOutlinePhone}
-              label="電話"
-              value={profile.phone}
-              onChange={(v) => update('phone', v)}
-              placeholder="e.g. 1234 5678"
-              type="tel"
-            />
-            <FormField
-              icon={HiOutlineEnvelope}
-              label="電郵"
-              value={profile.email}
-              onChange={(v) => update('email', v)}
-              placeholder="e.g. info@pharmacy.hk"
-              type="email"
-            />
-          </div>
-
-          <FormField
-            icon={HiOutlineIdentification}
-            label="牌照號碼"
-            value={profile.licenseNo}
-            onChange={(v) => update('licenseNo', v)}
-            placeholder="e.g. P-2024-XXXXX"
-          />
         </div>
 
         <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <p className="text-xs text-slate-400">
-            資料儲存於此瀏覽器的 Local Storage，不會上傳至任何伺服器。
+            資料只儲存於此瀏覽器，不會上傳至任何伺服器。
           </p>
           <button
             onClick={handleSave}
@@ -147,29 +120,24 @@ export default function PharmacyProfilePage() {
           <div className="px-6 py-4 border-b border-slate-100">
             <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <HiOutlineCheckCircle className="w-4 h-4 text-emerald-500" />
-              資料預覽
+              標籤預覽
             </h3>
           </div>
           <div className="p-6">
-            <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200/80 p-5 text-sm space-y-2">
+            <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200/80 p-5 text-sm space-y-1">
               {profile.name && (
                 <p className="font-bold text-slate-800 text-base">{profile.name}</p>
               )}
               {profile.address && (
-                <p className="text-slate-600">{profile.address}</p>
+                <p className="text-slate-500 text-xs">{profile.address}</p>
               )}
-              {(profile.phone || profile.email) && (
-                <p className="text-xs text-slate-400 flex flex-wrap gap-x-3 gap-y-1">
-                  {profile.phone && <span>📞 {profile.phone}</span>}
-                  {profile.email && <span>✉ {profile.email}</span>}
-                </p>
-              )}
-              {profile.licenseNo && (
-                <p className="text-xs text-slate-400 pt-1 border-t border-slate-100 mt-2">
-                  牌照號碼: <span className="font-mono font-medium text-slate-500">{profile.licenseNo}</span>
-                </p>
+              {!hasData && (
+                <p className="text-slate-400 text-xs italic">尚未填寫資料</p>
               )}
             </div>
+            <p className="text-[10px] text-slate-400 mt-3 text-center">
+              以上資料會以細字顯示在每張標籤的頂部（名稱）及底部（地址）
+            </p>
           </div>
         </div>
       )}
@@ -182,7 +150,7 @@ export default function PharmacyProfilePage() {
           </div>
           <h3 className="text-base font-semibold text-slate-700 mb-1">填寫藥房資料</h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
-            這些資料會自動出現在每一張藥物標籤上，設定一次即可。
+            名稱會印在標籤左上角，地址則顯示在底部，方便病人辨識。
           </p>
         </div>
       )}
@@ -197,7 +165,6 @@ function FormField({
   onChange,
   placeholder,
   multiline,
-  type,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -205,7 +172,6 @@ function FormField({
   onChange: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
-  type?: string;
 }) {
   return (
     <div>
@@ -224,7 +190,7 @@ function FormField({
           />
         ) : (
           <input
-            type={type || 'text'}
+            type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
