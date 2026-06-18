@@ -165,12 +165,16 @@ export default function LabelSettingsPage() {
               <rect x="0" y="0" width="210" height="297" fill="white" stroke="#e2e8f0" strokeWidth="0.5" />
 
               {/* Label grid */}
-              {Array.from({ length: config.rows * config.cols }, (_, i) => {
-                const col = i % config.cols;
-                const row = Math.floor(i / config.cols);
-                const x = config.marginLeft + col * (config.labelWidth + config.gapX);
-                const y = config.marginTop + row * (config.labelHeight + config.gapY);
-                return (
+              {(() => {
+                const totalGridH = config.rows * config.labelHeight + (config.rows - 1) * config.gapY;
+                const totalUsedH = config.marginTop + totalGridH + config.marginBottom;
+                const extraPad = Math.max(0, (297 - totalUsedH) / 2);
+                return Array.from({ length: config.rows * config.cols }, (_, i) => {
+                  const col = i % config.cols;
+                  const row = Math.floor(i / config.cols);
+                  const x = config.marginLeft + col * (config.labelWidth + config.gapX);
+                  const y = config.marginTop + extraPad + row * (config.labelHeight + config.gapY);
+                  return (
                   <rect
                     key={i}
                     x={x}
@@ -183,7 +187,7 @@ export default function LabelSettingsPage() {
                     rx="0.5"
                   />
                 );
-              })}
+              })()}
 
               <text x="105" y="8" textAnchor="middle" fontSize="2.5" fill="#94a3b8" fontFamily="Inter, sans-serif">
                 A4 (210 × 297 mm)

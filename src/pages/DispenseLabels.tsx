@@ -36,6 +36,7 @@ interface LabelRow {
   selectedDrug: Drug | null;
   customUsage: string;
   customPrecautions: string;
+  copies: number;
 }
 
 let rowIdCounter = 0;
@@ -50,6 +51,7 @@ function createEmptyRow(): LabelRow {
     selectedDrug: null,
     customUsage: '',
     customPrecautions: '',
+    copies: 1,
   };
 }
 
@@ -139,14 +141,17 @@ export default function DispenseLabelsPage() {
     if (!profile) return [];
     return rows
       .filter((r) => r.patientName.trim() && r.selectedDrug)
-      .map((r) => ({
-        patientName: r.patientName,
-        date: today,
-        pharmacy: profile,
-        drug: r.selectedDrug!,
-        customUsage: r.customUsage || undefined,
-        customPrecautions: r.customPrecautions || undefined,
-      }));
+      .flatMap((r) => {
+        const item: LabelItem = {
+          patientName: r.patientName,
+          date: today,
+          pharmacy: profile,
+          drug: r.selectedDrug!,
+          customUsage: r.customUsage || undefined,
+          customPrecautions: r.customPrecautions || undefined,
+        };
+        return Array.from({ length: r.copies }, () => ({ ...item }));
+      });
   };
 
   const handlePreview = () => {
@@ -166,6 +171,9 @@ export default function DispenseLabelsPage() {
   };
 
   const validRows = rows.filter((r) => r.patientName.trim() && r.selectedDrug);
+  const totalLabels = validRows.reduce((sum, r) => sum + r.copies, 0);
+  const labelsPerPage = gridConfig.cols * gridConfig.rows;
+  const totalPages = Math.ceil(totalLabels / labelsPerPage);
   const hasProfile = !!profile;
 
   return (
@@ -263,6 +271,22 @@ export default function DispenseLabelsPage() {
                 {row.patientName && (
                   <span className="text-xs text-indigo-500 font-medium ml-1">
                     · {row.patientName}
+                  </span>
+                )}
+                {row.selectedDrug && (
+                  <span className="flex items-center gap-1 ml-2 text-xs text-slate-400">
+                    <span className="text-slate-300">×</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={row.copies}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value) || 1;
+                        updateRow(row.id, 'copies', Math.max(1, Math.min(999, v)));
+                      }}
+                      className="w-10 px-1 py-0.5 bg-white border border-slate-200 rounded-md text-xs text-center text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-400"
+                    />
                   </span>
                 )}
               </div>
@@ -460,17 +484,17 @@ export default function DispenseLabelsPage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-sm text-slate-500">
               <HiOutlineBuildingOffice2 className="w-4 h-4" />
-              共 <strong className="text-slate-800">{validRows.length}</strong> 張標籤
+              共 <strong className="text-slate-800">{totalLabels}</strong> 張標籤
             </div>
             <div className="w-px h-5 bg-slate-200" />
             <div className="flex items-center gap-1.5 text-sm text-slate-500">
               <HiOutlineDocumentText className="w-4 h-4" />
-              每頁 <strong className="text-slate-800">{gridConfig.cols * gridConfig.rows}</strong> 格
+              每頁 <strong className="text-slate-800">{labelsPerPage}</strong> 格
             </div>
             <div className="w-px h-5 bg-slate-200" />
             <div className="flex items-center gap-1.5 text-sm text-slate-500">
               <HiOutlinePrinter className="w-4 h-4" />
-              共 <strong className="text-slate-800">{Math.ceil(validRows.length / (gridConfig.cols * gridConfig.rows))}</strong> 頁
+              共 <strong className="text-slate-800">{totalPages}</strong> 頁 A4
             </div>
           </div>
           <button
