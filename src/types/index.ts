@@ -11,7 +11,7 @@ export interface Drug {
   generic_name: string;       // e.g. Paracetamol
   brand_name: string;         // e.g. Panadol
   hk_number: string;          // HK-XXXXX
-  ingredient: string;         // active ingredient
+  ingredient: string;         // each line = "Name, Dosage", e.g. "Pseudoephedrine HCl, 120mg\nLoratadine, 5mg"
   dosage: string;             // e.g. 500mg
   default_usage: string;      // default usage instructions
   default_precautions: string; // default precautions/warnings

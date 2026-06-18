@@ -74,4 +74,5 @@ INSERT INTO public.drugs (generic_name, brand_name, hk_number, ingredient, dosag
   ('Omeprazole', 'Losec', 'HK-23456', 'Omeprazole 20mg', '20mg', '每日 1 次，每次 1 粒，空腹服用（早餐前最少 30 分鐘）。', '長期服用可能增加骨折風險，請定期覆診。'),
   ('Metformin', 'Glucophage', 'HK-34567', 'Metformin HCl 500mg', '500mg', '每日 2-3 次，每次 1 粒，餐後服用。', '此藥可能引致腸胃不適，初期服用常見。如出現嚴重嘔吐或呼吸困難請立即求醫。'),
   ('Salbutamol', 'Ventolin Inhaler', 'HK-45678', 'Salbutamol sulfate 100mcg/dose', '100mcg/揿', '需要時使用，每次 1-2 揿。每日不應超過 8 揿。', '此藥可能引致心跳加速及手震。如藥效減弱請立即求醫。'),
-  ('Cetirizine', 'Zyrtec', 'HK-56789', 'Cetirizine HCl 10mg', '10mg', '每日 1 次，每次 1 粒，需要時服用。', '此藥引致昏睡，服藥後避免駕駛或操作機械。');
+  ('Cetirizine', 'Zyrtec', 'HK-56789', 'Cetirizine HCl 10mg', '10mg', '每日 1 次，每次 1 粒，需要時服用。', '此藥引致昏睡，服藥後避免駕駛或操作機械。'),
+  ('Loratadine/Pseudoephedrine', 'Clarinase', 'HK-12346', 'Pseudoephedrine HCl, 120mg\nLoratadine, 5mg', '120mg/5mg', '每日 2 次，每次 1 粒。', '此藥可能引致心跳加速及手震。失眠患者及青光眼患者請咨詢醫生。');

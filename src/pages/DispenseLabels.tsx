@@ -18,6 +18,7 @@ import { fetchDrugs, fetchWarningTemplates } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { downloadLabelPDF, previewLabelPDF } from '../lib/pdfGenerator';
 import PrecautionEditor from '../components/PrecautionEditor';
+import { formatIngredientsDisplay } from '../components/IngredientEditor';
 import type { Drug, PharmacyProfile, LabelItem, LabelGridConfig } from '../types';
 import { loadGridConfig } from '../lib/storage';
 import { DEFAULT_GRID } from '../types';
@@ -442,7 +443,7 @@ export default function DispenseLabelsPage() {
                   <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
                     {drug.generic_name}
                     <span className="text-slate-300">·</span>
-                    {drug.ingredient || drug.generic_name}
+                    {formatIngredientsDisplay(drug.ingredient) || drug.generic_name}
                   </p>
                 </button>
               ))

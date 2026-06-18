@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { HiOutlineXMark, HiOutlineBeaker, HiOutlineCheckCircle } from 'react-icons/hi2';
 import type { Drug } from '../types';
 import PrecautionEditor from './PrecautionEditor';
+import IngredientEditor from './IngredientEditor';
 import { fetchWarningTemplates, isSupabaseConfigured } from '../lib/supabase';
 
 const COMMON_PRECAUTIONS = [
@@ -218,14 +219,11 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-              藥物成分
+              藥物成分 <span className="text-slate-300 font-normal normal-case">(每種成分名稱 + 劑量)</span>
             </label>
-            <input
-              type="text"
+            <IngredientEditor
               value={form.ingredient}
-              onChange={(e) => update('ingredient', e.target.value)}
-              placeholder="e.g. Paracetamol 500mg, Caffeine 65mg"
-              className="input-modern px-3.5"
+              onChange={(v) => update('ingredient', v)}
             />
           </div>
 
