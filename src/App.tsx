@@ -1,12 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import Layout from './components/Layout';
 import DispenseLabels from './pages/DispenseLabels';
 import DrugDatabase from './pages/DrugDatabase';
 import WarningTemplates from './pages/WarningTemplates';
 import PharmacyProfile from './pages/PharmacyProfile';
 import LabelSettings from './pages/LabelSettings';
+import { ensureCJKFont } from './lib/pdfFont';
 
 export default function App() {
+  useEffect(() => { ensureCJKFont(); }, []);
   return (
     <BrowserRouter>
       <Routes>

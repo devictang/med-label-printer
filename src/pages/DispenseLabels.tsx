@@ -154,20 +154,21 @@ export default function DispenseLabelsPage() {
       });
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     const items = buildLabelItems();
     if (items.length === 0) return;
-    previewLabelPDF(items, gridConfig);
+    await previewLabelPDF(items, gridConfig);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const items = buildLabelItems();
     if (items.length === 0) return;
     setGenerating(true);
-    setTimeout(() => {
-      downloadLabelPDF(items, gridConfig);
+    try {
+      await downloadLabelPDF(items, gridConfig);
+    } finally {
       setGenerating(false);
-    }, 300);
+    }
   };
 
   const validRows = rows.filter((r) => r.patientName.trim() && r.selectedDrug);

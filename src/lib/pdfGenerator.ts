@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { formatIngredientsDisplay } from '../components/IngredientEditor';
+import { ensureCJKFont, registerCJKFont, setDocFont } from './pdfFont';
 import type { LabelItem, LabelGridConfig } from '../types';
 
 const A4_WIDTH = 210;  // mm
@@ -27,7 +28,7 @@ function drawLabel(
 
   // --- Pharmacy name (top-left, small) ---
   doc.setFontSize(6);
-  doc.setFont('Helvetica', 'normal');
+  setDocFont(doc, 'normal');
   doc.setTextColor(100, 100, 100);
   const pharmName = item.pharmacy.name.length > 30
     ? item.pharmacy.name.slice(0, 28) + '…'
@@ -40,7 +41,7 @@ function drawLabel(
   doc.text(`HK#: ${item.drug.hk_number}`, cx + cw, cy + 3, { align: 'right' });
 
   // --- Patient name (bold, prominent) ---
-  doc.setFont('Helvetica', 'bold');
+  setDocFont(doc, 'bold');
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
   const patientLabel = item.patientName.length > 25
@@ -49,13 +50,13 @@ function drawLabel(
   doc.text(patientLabel, cx, cy + 8);
 
   // --- Date ---
-  doc.setFont('Helvetica', 'normal');
+  setDocFont(doc, 'normal');
   doc.setFontSize(6);
   doc.setTextColor(80, 80, 80);
   doc.text(item.date, cx + cw, cy + 8, { align: 'right' });
 
   // --- Drug name (brand + generic) ---
-  doc.setFont('Helvetica', 'bold');
+  setDocFont(doc, 'bold');
   doc.setFontSize(7);
   doc.setTextColor(0, 50, 80);
   const drugLine = item.drug.brand_name;
@@ -63,7 +64,7 @@ function drawLabel(
   doc.text(truncatedDrug, cx, cy + 13.5);
 
   // --- Ingredient(s) ---
-  doc.setFont('Helvetica', 'normal');
+  setDocFont(doc, 'normal');
   doc.setFontSize(6);
   doc.setTextColor(50, 50, 50);
   const ingText = item.drug.ingredient
@@ -88,7 +89,7 @@ function drawLabel(
   const cautionText = item.customPrecautions || item.drug.default_precautions;
   if (cautionText) {
     doc.setTextColor(180, 30, 30);
-    doc.setFont('Helvetica', 'bold');
+    setDocFont(doc, 'bold');
     doc.setFontSize(5);
     const cautionLines = doc.splitTextToSize(cautionText, cw);
     let cautionY = y + h - pad - cautionLines.length * 3 - 1;
@@ -100,7 +101,7 @@ function drawLabel(
   }
 
   // --- Address line at bottom very small ---
-  doc.setFont('Helvetica', 'normal');
+  setDocFont(doc, 'normal');
   doc.setFontSize(4.5);
   doc.setTextColor(150, 150, 150);
   const addrText = item.pharmacy.address.length > 60
@@ -129,16 +130,18 @@ function getLabelPositions(
 }
 
 /** Generate a PDF with labels. Returns the PDF as a Blob. */
-export function generateLabelPDF(
+export async function generateLabelPDF(
   items: LabelItem[],
   config: LabelGridConfig,
   includeEmptyGrid: boolean = true,
-): Blob {
+): Promise<Blob> {
+  await ensureCJKFont();
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
+  registerCJKFont(doc);
 
   const itemsPerPage = config.cols * config.rows;
 
@@ -188,8 +191,8 @@ export function generateLabelPDF(
 }
 
 /** Generate and download the PDF */
-export function downloadLabelPDF(items: LabelItem[], config: LabelGridConfig): void {
-  const blob = generateLabelPDF(items, config);
+export async function downloadLabelPDF(items: LabelItem[], config: LabelGridConfig): Promise<void> {
+  const blob = await generateLabelPDF(items, config);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -201,8 +204,8 @@ export function downloadLabelPDF(items: LabelItem[], config: LabelGridConfig): v
 }
 
 /** Preview the PDF in a new tab */
-export function previewLabelPDF(items: LabelItem[], config: LabelGridConfig): void {
-  const blob = generateLabelPDF(items, config);
+export async function previewLabelPDF(items: LabelItem[], config: LabelGridConfig): Promise<void> {
+  const blob = await generateLabelPDF(items, config);
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
   // Clean up after a delay
