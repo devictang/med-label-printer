@@ -128,6 +128,7 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
           type="text"
           value={inputVal}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => { if (remaining > 0) setOpen(true); }}
           placeholder={
             remaining > 0
