@@ -175,7 +175,7 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
       </div>
 
       {/* Portal dropdown — fixed to viewport so it escapes card stacking context */}
-      {open && remaining > 0 && dropdownPos && console.log('[PrecautionEditor] rendering portal at', dropdownPos) || createPortal(
+      {open && remaining > 0 && dropdownPos && createPortal(
         <div
           ref={portalRef}
           className="fixed z-[9999] animate-scale-in"
