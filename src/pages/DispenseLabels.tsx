@@ -221,11 +221,11 @@ export default function DispenseLabelsPage() {
         {rows.map((row, idx) => (
           <div
             key={row.id}
-            className="card-elevated overflow-hidden animate-fade-in-up"
+            className="card-elevated animate-fade-in-up"
             style={{ animationDelay: `${idx * 60}ms` }}
           >
             {/* Card header */}
-            <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-slate-50/80 to-white border-b border-slate-100/80">
+            <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-slate-50/80 to-white border-b border-slate-100/80 rounded-t-xl overflow-hidden">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
                   {idx + 1}
