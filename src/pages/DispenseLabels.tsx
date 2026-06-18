@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   HiOutlinePlusCircle,
   HiOutlineTrash,
@@ -52,6 +53,8 @@ export default function DispenseLabelsPage() {
   const [showDrugPicker, setShowDrugPicker] = useState<string | null>(null);
   const [gridConfig, setGridConfig] = useState<LabelGridConfig>(DEFAULT_GRID);
   const [generating, setGenerating] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const pickerInputRef = useRef<HTMLInputElement | null>(null);
 
   const supabaseOk = isSupabaseConfigured();
 
@@ -87,8 +90,21 @@ export default function DispenseLabelsPage() {
       prev.map((r) => (r.id === rowId ? { ...r, selectedDrug: drug } : r)),
     );
     setShowDrugPicker(null);
+    setPickerPos(null);
     setDrugSearch('');
   };
+
+  const openPicker = useCallback((rowId: string, inputEl: HTMLInputElement | null) => {
+    if (!inputEl) return;
+    const rect = inputEl.getBoundingClientRect();
+    setPickerPos({
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: rect.width,
+    });
+    setShowDrugPicker(rowId);
+    setDrugSearch('');
+  }, []);
 
   const filteredDrugs = useMemo(() => {
     if (!drugSearch) return drugs;
@@ -309,12 +325,10 @@ export default function DispenseLabelsPage() {
                       <div className="relative">
                         <HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
+                          ref={showDrugPicker === row.id ? pickerInputRef : undefined}
                           type="text"
                           value={showDrugPicker === row.id ? drugSearch : ''}
-                          onFocus={() => {
-                            setShowDrugPicker(row.id);
-                            setDrugSearch('');
-                          }}
+                          onFocus={(e) => openPicker(row.id, e.currentTarget)}
                           onChange={(e) => setDrugSearch(e.target.value)}
                           placeholder={
                             supabaseOk
@@ -326,47 +340,6 @@ export default function DispenseLabelsPage() {
                         />
                         <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                       </div>
-
-                      {/* Dropdown */}
-                      {showDrugPicker === row.id && supabaseOk && (
-                        <div className="absolute z-20 top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 max-h-56 overflow-y-auto animate-scale-in">
-                          {filteredDrugs.length === 0 ? (
-                            <div className="px-4 py-8 text-center">
-                              <HiOutlineMagnifyingGlass className="w-6 h-6 text-slate-300 mx-auto mb-2" />
-                              <p className="text-xs text-slate-400">
-                                {drugSearch ? '找不到相符藥物' : '尚未加入任何藥物'}
-                              </p>
-                            </div>
-                          ) : (
-                            filteredDrugs.map((drug) => (
-                              <button
-                                key={drug.id}
-                                onClick={() => selectDrug(row.id, drug)}
-                                className="w-full text-left px-4 py-3 hover:bg-indigo-50/60 transition-colors border-b border-slate-50 last:border-0 group"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <span className="text-sm font-semibold text-slate-800 group-hover:text-indigo-700 transition-colors">
-                                      {drug.brand_name || drug.generic_name}
-                                    </span>
-                                    <span className="text-xs text-slate-400 ml-2">
-                                      {drug.dosage}
-                                    </span>
-                                  </div>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {drug.hk_number}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                  {drug.generic_name}
-                                  <span className="text-slate-300">·</span>
-                                  {drug.ingredient || drug.generic_name}
-                                </p>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -422,6 +395,71 @@ export default function DispenseLabelsPage() {
         ))}
       </div>
 
+      {/* Portal drug picker dropdown */}
+      {showDrugPicker && pickerPos && supabaseOk && createPortal(
+        <div
+          className="fixed z-50 animate-scale-in"
+          style={{
+            top: pickerPos.top,
+            left: pickerPos.left,
+            width: pickerPos.width,
+          }}
+        >
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 max-h-56 overflow-y-auto">
+            {/* Search input inside dropdown */}
+            <div className="p-2 border-b border-slate-100">
+              <div className="relative">
+                <HiOutlineMagnifyingGlass className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={drugSearch}
+                  onChange={(e) => setDrugSearch(e.target.value)}
+                  placeholder="搜尋藥物…"
+                  autoFocus
+                  className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                />
+              </div>
+            </div>
+            {filteredDrugs.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <HiOutlineMagnifyingGlass className="w-6 h-6 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs text-slate-400">
+                  {drugSearch ? '找不到相符藥物' : '尚未加入任何藥物'}
+                </p>
+              </div>
+            ) : (
+              filteredDrugs.map((drug) => (
+                <button
+                  key={drug.id}
+                  onClick={() => selectDrug(showDrugPicker, drug)}
+                  className="w-full text-left px-4 py-3 hover:bg-indigo-50/60 transition-colors border-b border-slate-50 last:border-0 group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-semibold text-slate-800 group-hover:text-indigo-700 transition-colors">
+                        {drug.brand_name || drug.generic_name}
+                      </span>
+                      <span className="text-xs text-slate-400 ml-2">
+                        {drug.dosage}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {drug.hk_number}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                    {drug.generic_name}
+                    <span className="text-slate-300">·</span>
+                    {drug.ingredient || drug.generic_name}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Add more button */}
       <button
         onClick={addRow}
@@ -472,6 +510,18 @@ export default function DispenseLabelsPage() {
             填寫病人姓名及選擇藥物即可生成 A4 標籤 PDF，你可為多位病人一次過批量列印。
           </p>
         </div>
+      )}
+
+      {/* Click outside to close dropdown */}
+      {showDrugPicker && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => {
+            setShowDrugPicker(null);
+            setPickerPos(null);
+            setDrugSearch('');
+          }}
+        />
       )}
     </div>
   );
