@@ -171,7 +171,7 @@ export default function DrugDatabasePage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜尋藥物名稱或成分…"
-            className="input-modern pl-10"
+            className="input-modern pl-10 pr-3.5"
           />
           {search && (
             <button

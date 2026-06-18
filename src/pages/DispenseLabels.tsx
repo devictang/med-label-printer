@@ -263,7 +263,7 @@ export default function DispenseLabelsPage() {
                       value={row.patientName}
                       onChange={(e) => updateRow(row.id, 'patientName', e.target.value)}
                       placeholder="輸入病人姓名"
-                      className="input-modern pl-9"
+                      className="input-modern pl-9 pr-3.5"
                     />
                     <HiOutlineBuildingOffice2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   </div>
@@ -385,7 +385,7 @@ export default function DispenseLabelsPage() {
                         value={row.customUsage}
                         onChange={(e) => updateRow(row.id, 'customUsage', e.target.value)}
                         placeholder={row.selectedDrug.default_usage || '自訂用法'}
-                        className="input-modern"
+                        className="input-modern px-3.5"
                       />
                     </div>
                     {!row.customUsage && row.selectedDrug.default_usage && (
@@ -405,7 +405,7 @@ export default function DispenseLabelsPage() {
                         value={row.customPrecautions}
                         onChange={(e) => updateRow(row.id, 'customPrecautions', e.target.value)}
                         placeholder={row.selectedDrug.default_precautions || '自訂注意事項'}
-                        className="input-modern"
+                        className="input-modern px-3.5"
                       />
                     </div>
                     {!row.customPrecautions && row.selectedDrug.default_precautions && (

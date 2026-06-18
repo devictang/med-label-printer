@@ -142,7 +142,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
                 list="generic-list"
                 placeholder="e.g. Paracetamol"
                 required
-                className="input-modern"
+                className="input-modern px-3.5"
               />
               <datalist id="generic-list">
                 {COMMON_GENERICS.map((name) => (
@@ -165,7 +165,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
                 value={form.brand_name}
                 onChange={(e) => update('brand_name', e.target.value)}
                 placeholder="e.g. Panadol"
-                className="input-modern"
+                className="input-modern px-3.5"
               />
             </div>
           </div>
@@ -181,7 +181,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
                 onChange={(e) => update('hk_number', e.target.value)}
                 placeholder="e.g. HK-65432"
                 required
-                className="input-modern"
+                className="input-modern px-3.5"
               />
             </div>
             <div>
@@ -194,7 +194,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
                 onChange={(e) => update('dosage', e.target.value)}
                 placeholder="e.g. 500mg"
                 required
-                className="input-modern"
+                className="input-modern px-3.5"
               />
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
               value={form.ingredient}
               onChange={(e) => update('ingredient', e.target.value)}
               placeholder="e.g. Paracetamol 500mg, Caffeine 65mg"
-              className="input-modern"
+              className="input-modern px-3.5"
             />
           </div>
 
@@ -221,7 +221,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
               onChange={(e) => update('default_usage', e.target.value)}
               rows={2}
               placeholder="每日 3 次，每次 1 粒，餐後服用"
-              className="input-modern resize-none"
+              className="input-modern px-3.5 resize-none"
             />
           </div>
 
@@ -234,7 +234,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
               onChange={(e) => update('default_precautions', e.target.value)}
               rows={2}
               placeholder="此藥引致昏睡，服藥後避免駕駛。"
-              className="input-modern resize-none"
+              className="input-modern px-3.5 resize-none"
             />
           </div>
 

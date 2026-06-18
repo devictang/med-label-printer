@@ -220,7 +220,7 @@ function FormField({
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             rows={2}
-            className="input-modern pl-10 resize-none"
+            className="input-modern pl-10 pr-3.5 resize-none"
           />
         ) : (
           <input
@@ -228,7 +228,7 @@ function FormField({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="input-modern pl-10"
+            className="input-modern pl-10 pr-3.5"
           />
         )}
       </div>

@@ -230,7 +230,7 @@ function Field({
           min={min}
           max={max}
           step={step || 1}
-          className="input-modern"
+          className="input-modern px-3.5"
         />
         <span className="text-xs text-slate-400 w-5 font-medium">mm</span>
       </div>
