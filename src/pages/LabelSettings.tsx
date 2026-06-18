@@ -164,30 +164,40 @@ export default function LabelSettingsPage() {
             <svg viewBox="0 0 210 297" className="w-full h-full">
               <rect x="0" y="0" width="210" height="297" fill="white" stroke="#e2e8f0" strokeWidth="0.5" />
 
-              {/* Label grid */}
-              {(() => {
-                const totalGridH = config.rows * config.labelHeight + (config.rows - 1) * config.gapY;
-                const totalUsedH = config.marginTop + totalGridH + config.marginBottom;
-                const extraPad = Math.max(0, (297 - totalUsedH) / 2);
-                return Array.from({ length: config.rows * config.cols }, (_, i) => {
-                  const col = i % config.cols;
-                  const row = Math.floor(i / config.cols);
-                  const x = config.marginLeft + col * (config.labelWidth + config.gapX);
-                  const y = config.marginTop + extraPad + row * (config.labelHeight + config.gapY);
-                  return (
-                  <rect
-                    key={i}
-                    x={x}
-                    y={y}
-                    width={config.labelWidth}
-                    height={config.labelHeight}
-                    fill="rgba(99, 102, 241, 0.06)"
-                    stroke="rgba(99, 102, 241, 0.4)"
-                    strokeWidth="0.3"
-                    rx="0.5"
-                  />
+              {/* Label grid — evenly divided across A4 */}
+              {Array.from({ length: config.rows * config.cols }, (_, i) => {
+                const col = i % config.cols;
+                const row = Math.floor(i / config.cols);
+                const cellW = 210 / config.cols;
+                const cellH = 297 / config.rows;
+                const x = col * cellW;
+                const y = row * cellH;
+                return (
+                  <g key={i}>
+                    {/* Cell background */}
+                    <rect
+                      x={x}
+                      y={y}
+                      width={cellW}
+                      height={cellH}
+                      fill={i % 2 === 0 ? 'rgba(99, 102, 241, 0.05)' : 'rgba(99, 102, 241, 0.02)'}
+                      stroke="rgba(99, 102, 241, 0.25)"
+                      strokeWidth="0.2"
+                    />
+                    {/* Label outline within cell */}
+                    <rect
+                      x={x + (cellW - config.labelWidth) / 2}
+                      y={y + (cellH - config.labelHeight) / 2}
+                      width={config.labelWidth}
+                      height={config.labelHeight}
+                      fill="rgba(99, 102, 241, 0.07)"
+                      stroke="rgba(99, 102, 241, 0.5)"
+                      strokeWidth="0.3"
+                      rx="0.5"
+                    />
+                  </g>
                 );
-              })()}
+              })}
 
               <text x="105" y="8" textAnchor="middle" fontSize="2.5" fill="#94a3b8" fontFamily="Inter, sans-serif">
                 A4 (210 × 297 mm)
