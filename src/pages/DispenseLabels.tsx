@@ -25,9 +25,9 @@ import { DEFAULT_GRID } from '../types';
 
 /** Fallback warnings when Supabase is not connected. */
 const FALLBACK_WARNINGS = [
-  '此藥引致昏睡，服藥後避免駕駛或操作機械。',
-  '此藥可能引致腸胃不適，請飽肚服用。',
-  '處方藥物 Prescription Drug',
+  'This medication may cause drowsiness. Avoid driving or operating machinery.||此藥引致昏睡，服藥後避免駕駛或操作機械。',
+  'This medication may cause gastrointestinal discomfort. Take with food.||此藥可能引致腸胃不適，請飽肚服用。',
+  'Prescription Drug||處方藥物 Prescription Drug',
 ];
 
 interface LabelRow {
@@ -88,7 +88,7 @@ export default function DispenseLabelsPage() {
     if (!supabaseOk) return;
     fetchDrugs().then(setDrugs).catch(() => {});
     fetchWarningTemplates()
-      .then((data) => setTemplates(data.map((t) => t.text)))
+      .then((data) => setTemplates(data.map((t) => `${t.text_en}||${t.text_zh}`)))
       .catch(() => {});
   }, [supabaseOk]);
 

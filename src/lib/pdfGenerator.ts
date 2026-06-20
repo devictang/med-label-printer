@@ -124,19 +124,72 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     curY += usageLineH;
   });
 
-  // Precautions — bold, 6.5pt (black, not red)
+  // Precautions — bold, 6.5pt (black) — bilingual: EN first, ZH below if too long
   if (cautionText) {
     curY += 0.5;
     if (curY < maxTextY) {
       doc.setTextColor(0, 0, 0);
       setDocFont(doc, 'bold');
       doc.setFontSize(6.5);
-      const cautionLines = doc.splitTextToSize(cautionText, w);
-      const maxCL = Math.min(2, Math.max(1, Math.floor((maxTextY - curY) / 3.3)));
-      cautionLines.slice(0, maxCL).forEach((line: string) => {
-        doc.text(`⚠ ${line}`, x, curY);
-        curY += 3.3;
-      });
+
+      const precautionLines = cautionText.split('\n').map((l) => l.trim()).filter(Boolean);
+      let drawn = 0;
+      const maxDraw = 2; // max total lines on label
+
+      for (const line of precautionLines) {
+        if (drawn >= maxDraw || curY >= maxTextY) break;
+
+        // Parse bilingual pair
+        const pipeIdx = line.indexOf('||');
+        let en: string, zh: string;
+        if (pipeIdx === -1) {
+          // Single language (backward compat) — treat as both
+          en = line;
+          zh = line;
+        } else {
+          en = line.slice(0, pipeIdx).trim();
+          zh = line.slice(pipeIdx + 2).trim();
+        }
+
+        if (!en && !zh) continue;
+
+        // Try to fit EN + ZH on one line
+        const combined = `⚠ ${en}  ${zh}`;
+        let fitsOneLine = true;
+        try {
+          fitsOneLine = doc.getTextWidth(combined) <= w;
+        } catch {
+          // getTextWidth may fail with some fonts — fall back to single-line
+          fitsOneLine = false;
+        }
+
+        if (fitsOneLine && drawn < maxDraw && curY < maxTextY) {
+          doc.text(combined, x, curY);
+          curY += 3.3;
+          drawn++;
+        } else if (en === zh) {
+          // Single language: auto-wrap like before
+          const singleLines = doc.splitTextToSize(`⚠ ${en}`, w);
+          for (const sl of singleLines.slice(0, maxDraw - drawn)) {
+            if (curY >= maxTextY) break;
+            doc.text(sl, x, curY);
+            curY += 3.3;
+            drawn++;
+          }
+        } else {
+          // Two-line mode: EN on first line, ZH on second
+          if (en && drawn < maxDraw && curY < maxTextY) {
+            doc.text(`⚠ ${en}`, x, curY);
+            curY += 3.3;
+            drawn++;
+          }
+          if (zh && zh !== en && drawn < maxDraw && curY < maxTextY) {
+            doc.text(zh, x, curY);
+            curY += 3.3;
+            drawn++;
+          }
+        }
+      }
     }
   }
 

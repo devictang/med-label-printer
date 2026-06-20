@@ -73,11 +73,15 @@ export async function fetchWarningTemplates(): Promise<WarningTemplate[]> {
 }
 
 export async function createWarningTemplate(
-  template: Pick<WarningTemplate, 'text'>,
+  template: Pick<WarningTemplate, 'text_en' | 'text_zh'>,
 ): Promise<WarningTemplate> {
   const { data, error } = await supabase
     .from('warning_templates')
-    .insert([template])
+    .insert([{
+      text_en: template.text_en,
+      text_zh: template.text_zh,
+      text: `${template.text_en}||${template.text_zh}`, // keep legacy field in sync
+    }])
     .select()
     .single();
   if (error) throw error;
@@ -86,11 +90,15 @@ export async function createWarningTemplate(
 
 export async function updateWarningTemplate(
   id: number,
-  template: Pick<WarningTemplate, 'text'>,
+  template: Pick<WarningTemplate, 'text_en' | 'text_zh'>,
 ): Promise<WarningTemplate> {
   const { data, error } = await supabase
     .from('warning_templates')
-    .update(template)
+    .update({
+      text_en: template.text_en,
+      text_zh: template.text_zh,
+      text: `${template.text_en}||${template.text_zh}`, // keep legacy field in sync
+    })
     .eq('id', id)
     .select()
     .single();

@@ -20,7 +20,9 @@ export interface Drug {
 export interface WarningTemplate {
   id?: number;
   created_at?: string;
-  text: string;
+  text: string;             // legacy single field (keep for backward compat)
+  text_en: string;          // English version
+  text_zh: string;          // Chinese version
 }
 
 /** A single label to print */

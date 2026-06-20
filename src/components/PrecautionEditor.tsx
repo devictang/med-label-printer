@@ -2,22 +2,46 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { HiOutlineXMark, HiOutlineMagnifyingGlass, HiOutlineChevronDown } from 'react-icons/hi2';
 
-export function getPrecautionsList(value: string): string[] {
-  return value.split('\n').map((l) => l.trim()).filter(Boolean);
+/* ─── Bilingual helpers ─────────────────────────────────── */
+
+/** Parse a single precaution line: "en||zh" → { en, zh }.
+ *  If no "||" found, treat text as both EN and ZH (backward compat). */
+export function parseBilingualItem(line: string): { en: string; zh: string } {
+  const idx = line.indexOf('||');
+  if (idx === -1) return { en: line.trim(), zh: line.trim() };
+  return {
+    en: line.slice(0, idx).trim(),
+    zh: line.slice(idx + 2).trim(),
+  };
 }
 
-export function precautionsToString(items: string[]): string {
-  return items.join('\n');
+/** Format a bilingual item back to "en||zh" string. Skips "||" if both are identical. */
+export function formatBilingualItem(en: string, zh: string): string {
+  if (!zh || zh === en) return en;
+  if (!en) return zh;
+  return `${en}||${zh}`;
 }
+
+/** Parse a full precaution value (newline-separated) into bilingual items */
+export function parseBilingualPrecautions(value: string): { en: string; zh: string }[] {
+  return value.split('\n').map((l) => l.trim()).filter(Boolean).map(parseBilingualItem);
+}
+
+/** Format bilingual items back to newline-separated text */
+export function formatBilingualPrecautions(items: { en: string; zh: string }[]): string {
+  return items.map((item) => formatBilingualItem(item.en, item.zh)).join('\n');
+}
+
+/* ─── Editor component ──────────────────────────────────── */
 
 interface PrecautionEditorProps {
   value: string;
   onChange: (v: string) => void;
-  commonPrecautions: string[];
+  commonPrecautions: string[];   // each in "en||zh" format
 }
 
 export default function PrecautionEditor({ value, onChange, commonPrecautions }: PrecautionEditorProps) {
-  const items = getPrecautionsList(value);
+  const items = parseBilingualPrecautions(value);
   const [inputVal, setInputVal] = useState('');
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -37,7 +61,6 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
         setDropdownPos(null);
       }
     };
-    // Delay so click-on-item fires first
     setTimeout(() => document.addEventListener('click', handler), 0);
     return () => document.removeEventListener('click', handler);
   }, [open]);
@@ -60,15 +83,15 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
     setDropdownPos(null);
   };
 
-  const addItem = (text: string) => {
+  const addItem = (combined: string) => {
     if (items.length >= MAX) return;
-    if (items.includes(text)) return;
-    onChange(precautionsToString([...items, text]));
+    if (items.some((i) => formatBilingualItem(i.en, i.zh) === combined)) return;
+    onChange(formatBilingualPrecautions([...items, parseBilingualItem(combined)]));
   };
 
   const removeItem = (idx: number) => {
     const next = items.filter((_, i) => i !== idx);
-    onChange(precautionsToString(next));
+    onChange(formatBilingualPrecautions(next));
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,15 +104,14 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
       e.preventDefault();
       const text = inputVal.trim();
       if (!text) return;
-      // If there's a filtered match not yet added, add that instead
       const match = filteredNotAdded.length > 0 ? filteredNotAdded[0] : null;
       if (match && match.toLowerCase() === text.toLowerCase()) {
         addItem(match);
       } else {
+        // Treat typed text as both EN and ZH (single language)
         addItem(text);
       }
       setInputVal('');
-      // Keep focus
       inputRef.current?.focus();
     }
     if (e.key === 'Escape') {
@@ -98,18 +120,19 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
     }
   };
 
-  const selectItem = (text: string) => {
-    addItem(text);
+  const selectItem = (combined: string) => {
+    addItem(combined);
     setInputVal('');
     inputRef.current?.focus();
   };
 
   // Filter common precautions by input text, exclude already-added items
   const filteredNotAdded = useMemo(() => {
-    if (!inputVal) return commonPrecautions.filter((p) => !items.includes(p));
+    if (!inputVal) return commonPrecautions.filter((p) => !items.some((i) => formatBilingualItem(i.en, i.zh) === p));
     const q = inputVal.toLowerCase();
     return commonPrecautions.filter(
-      (p) => !items.includes(p) && p.toLowerCase().includes(q),
+      (p) => !items.some((i) => formatBilingualItem(i.en, i.zh) === p) &&
+        p.toLowerCase().includes(q),
     );
   }, [commonPrecautions, items, inputVal]);
 
@@ -119,19 +142,26 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Selected items as chips */}
+      {/* Selected items as bilingual chips */}
       {items.length > 0 && (
         <div className="flex flex-col gap-1.5 mb-2">
           {items.map((item, i) => (
             <span
               key={i}
-              className="flex w-full items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200/60 rounded-xl text-xs font-medium text-indigo-700 leading-tight"
+              className="flex w-full items-start gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200/60 rounded-xl leading-tight"
             >
-              <span className="flex-1">{item}</span>
+              <span className="flex-1 min-w-0">
+                {item.en && (
+                  <span className="block text-xs font-semibold text-indigo-800">{item.en}</span>
+                )}
+                {item.zh && (
+                  <span className="block text-[10px] text-indigo-500/80 mt-0.5">{item.zh}</span>
+                )}
+              </span>
               <button
                 type="button"
                 onClick={() => removeItem(i)}
-                className="flex-shrink-0 p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="flex-shrink-0 p-0.5 rounded text-indigo-400 hover:text-red-500 hover:bg-red-50 transition-colors mt-0.5"
               >
                 <HiOutlineXMark className="w-3.5 h-3.5" />
               </button>
@@ -185,17 +215,29 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
               </div>
             )}
 
-            {/* Matching common items */}
-            {filteredNotAdded.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => selectItem(p)}
-                className="w-full text-left px-4 py-2.5 hover:bg-indigo-50/60 transition-colors border-b border-slate-50 last:border-0 text-xs text-slate-700 hover:text-indigo-700 leading-tight"
-              >
-                {p}
-              </button>
-            ))}
+            {/* Matching common items — show bilingual pairs */}
+            {filteredNotAdded.map((combined) => {
+              const item = parseBilingualItem(combined);
+              return (
+                <button
+                  key={combined}
+                  type="button"
+                  onClick={() => selectItem(combined)}
+                  className="w-full text-left px-4 py-2.5 hover:bg-indigo-50/60 transition-colors border-b border-slate-50 last:border-0"
+                >
+                  {item.en && (
+                    <span className="block text-xs font-medium text-slate-700 hover:text-indigo-700">
+                      {item.en}
+                    </span>
+                  )}
+                  {item.zh && (
+                    <span className="block text-[10px] text-slate-400 mt-0.5">
+                      {item.zh}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
 
             {/* Custom text option */}
             {showCustomOption && (
@@ -205,7 +247,7 @@ export default function PrecautionEditor({ value, onChange, commonPrecautions }:
                 className="w-full text-left px-4 py-2.5 bg-amber-50/60 hover:bg-amber-100/60 transition-colors border-t border-amber-100 text-xs font-medium text-amber-800 flex items-center gap-2"
               >
                 <span>+ 自訂：</span>
-                <span className="font-semibold">{inputVal.trim()}</span>
+                <span className="font-semibold truncate">{inputVal.trim()}</span>
               </button>
             )}
           </div>

@@ -6,9 +6,9 @@ import IngredientEditor from './IngredientEditor';
 import { fetchWarningTemplates, isSupabaseConfigured } from '../lib/supabase';
 
 const COMMON_PRECAUTIONS = [
-  '此藥引致昏睡，服藥後避免駕駛或操作機械。',
-  '此藥可能引致腸胃不適，請飽肚服用。',
-  '處方藥物 Prescription Drug',
+  'This medication may cause drowsiness. Avoid driving or operating machinery.||此藥引致昏睡，服藥後避免駕駛或操作機械。',
+  'This medication may cause gastrointestinal discomfort. Take with food.||此藥可能引致腸胃不適，請飽肚服用。',
+  'Prescription Drug||處方藥物 Prescription Drug',
 ];
 
 interface Props {
@@ -29,39 +29,39 @@ const emptyForm = {
 const USAGE_PRESETS: Record<string, { usage: string; precautions: string }> = {
   Panadol: {
     usage: '每日 3-4 次，每次 1-2 粒，需要時服用。24 小時內不應超過 8 粒。',
-    precautions: '此藥引致昏睡，服藥後避免駕駛或操作機械。避免與其他含撲熱息痛之藥物同時服用。',
+    precautions: 'This medication may cause drowsiness. Avoid driving.||此藥引致昏睡，服藥後避免駕駛或操作機械。Avoid taking with other paracetamol-containing products.||避免與其他含撲熱息痛之藥物同時服用。',
   },
   Nurofen: {
     usage: '每日 2-3 次，每次 1 粒，飽肚服用。',
-    precautions: '此藥可能引致腸胃不適，請飽肚服用。哮喘患者及胃潰瘍患者請咨詢醫生。',
+    precautions: 'This medication may cause gastrointestinal discomfort. Take with food.||此藥可能引致腸胃不適，請飽肚服用。Consult doctor if you have asthma or stomach ulcers.||哮喘患者及胃潰瘍患者請咨詢醫生。',
   },
   'Amoxicillin Capsules': {
     usage: '每日 3 次，每次 1 粒，依照醫生指示完成整個療程。',
-    precautions: '完成整個抗生素療程。如出現過敏反應（皮疹、呼吸困難）請立即求醫。',
+    precautions: 'Complete the full course of antibiotics.||完成整個抗生素療程。Seek medical attention immediately if allergic reaction occurs (rash, difficulty breathing).||如出現過敏反應（皮疹、呼吸困難）請立即求醫。',
   },
   Losec: {
     usage: '每日 1 次，每次 1 粒，空腹服用（早餐前最少 30 分鐘）。',
-    precautions: '長期服用可能增加骨折風險，請定期覆診。',
+    precautions: 'Long-term use may increase risk of fractures. Please have regular check-ups.||長期服用可能增加骨折風險，請定期覆診。',
   },
   Glucophage: {
     usage: '每日 2-3 次，每次 1 粒，餐後服用。',
-    precautions: '此藥可能引致腸胃不適，初期服用常見。如出現嚴重嘔吐或呼吸困難請立即求醫。',
+    precautions: 'This medication may cause gastrointestinal discomfort, especially at the start.||此藥可能引致腸胃不適，初期服用常見。Seek immediate medical attention if severe vomiting or difficulty breathing occurs.||如出現嚴重嘔吐或呼吸困難請立即求醫。',
   },
   'Ventolin Inhaler': {
     usage: '需要時使用，每次 1-2 揿。每日不應超過 8 揿。',
-    precautions: '此藥可能引致心跳加速及手震。如藥效減弱請立即求醫。',
+    precautions: 'This medication may cause increased heart rate and tremor.||此藥可能引致心跳加速及手震。Seek medical attention if medication becomes less effective.||如藥效減弱請立即求醫。',
   },
   Aspirin: {
     usage: '每日 1 次，每次 1 粒，餐後服用。',
-    precautions: '此藥可能增加出血風險。手術前請告知醫生正在服用此藥。',
+    precautions: 'This medication may increase bleeding risk. Inform your doctor before any surgery.||此藥可能增加出血風險。手術前請告知醫生正在服用此藥。',
   },
   Diclofenac: {
     usage: '每日 2-3 次，每次 1 粒，飽肚服用。',
-    precautions: '此藥可能引致腸胃不適及水腫。心臟病及腎病患者慎用。',
+    precautions: 'This medication may cause gastrointestinal discomfort and oedema.||此藥可能引致腸胃不適及水腫。Use with caution in patients with heart or kidney disease.||心臟病及腎病患者慎用。',
   },
   Zyrtec: {
     usage: '每日 1 次，每次 1 粒，需要時服用。',
-    precautions: '此藥引致昏睡，服藥後避免駕駛或操作機械。',
+    precautions: 'This medication may cause drowsiness. Avoid driving or operating machinery.||此藥引致昏睡，服藥後避免駕駛或操作機械。',
   },
 };
 
@@ -73,7 +73,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
   useEffect(() => {
     if (isSupabaseConfigured()) {
       fetchWarningTemplates()
-        .then((data) => setTemplates(data.map((t) => t.text)))
+        .then((data) => setTemplates(data.map((t) => `${t.text_en}||${t.text_zh}`)))
         .catch(() => {});
     }
   }, []);
