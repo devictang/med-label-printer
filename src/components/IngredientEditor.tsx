@@ -75,7 +75,7 @@ export default function IngredientEditor({ value, onChange }: IngredientEditorPr
           key={i}
           className="flex items-center gap-2 bg-slate-50/80 border border-slate-200/70 rounded-lg px-3 py-2 group"
         >
-          <div className="flex-1 grid grid-cols-[1fr_auto] gap-2">
+          <div className="flex-1 flex items-center gap-2">
             <input
               type="text"
               value={entry.name}
@@ -85,8 +85,9 @@ export default function IngredientEditor({ value, onChange }: IngredientEditorPr
                   ? '成分名稱'
                   : '新增成分名稱，輸入後自動加入…'
               }
-              className="w-full bg-transparent border-none p-0 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+              className="flex-1 min-w-0 bg-transparent border-none p-0 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
             />
+            <div className="w-px h-5 bg-slate-300 flex-shrink-0" />
             <input
               type="text"
               value={entry.dosage}
