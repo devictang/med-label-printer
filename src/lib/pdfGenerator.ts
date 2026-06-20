@@ -42,6 +42,28 @@ function trunc(s: string, max: number, cut: number) {
 }
 
 /**
+ * Character-count based line wrapping — splits text every N characters.
+ * This is used instead of jsPDF's splitTextToSize because the custom CJK
+ * font may not have reliable glyph width metrics, causing text to overflow
+ * the label width.
+ *
+ * For mixed CJK + Latin text at a given font size, we use a conservative
+ * millimetres-per-character estimate based on CJK (wider) characters:
+ *   10pt → 3.5 mm/char    8pt → 2.8 mm/char    7pt → 2.5 mm/char
+ *   6.5pt → 2.3 mm/char   6pt → 2.1 mm/char    5pt → 1.8 mm/char
+ *
+ * This guarantees every line fits within `w` mm regardless of font metrics.
+ */
+function wrapByChar(text: string, mmPerChar: number, w: number, maxLines: number): string[] {
+  const charsPerLine = Math.max(1, Math.floor(w / mmPerChar));
+  const lines: string[] = [];
+  for (let i = 0; i < text.length && lines.length < maxLines; i += charsPerLine) {
+    lines.push(text.slice(i, i + charsPerLine));
+  }
+  return lines;
+}
+
+/**
  * Draw all content inside one label cell.
  *
  * Layout flows top→bottom with EVERY line bounded by maxTextY
@@ -87,11 +109,11 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
   doc.setTextColor(80, 80, 80);
   doc.text(item.date, x + w, infoY, { align: 'right' });
 
-  // ── Upper bound for the mid section (brand → precautions) ─────
-  const maxTextY = infoY - 1.5;  // last Y where mid-section text is safe
-  if (maxTextY <= y + 8) return; // too small — nothing fits
+  // ── Upper bound for the mid section ──────────────────────────
+  const maxTextY = infoY - 1.5;
+  if (maxTextY <= y + 8) return;
 
-  // ── L1: Top bar — fixed at top ────────────────────────────────
+  // ── L1: Top bar ──────────────────────────────────────────────
   const topY = y + 2.5;
   setDocFont(doc, 'normal');
   doc.setFontSize(7);
@@ -104,39 +126,36 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     doc.text(`${item.quantity} ${item.unit}`, x + w, topY, { align: 'right' });
   }
 
-  // ── Mid section — every line below must check curY < maxTextY ──
+  // ── Mid section — character-count wrapping (no jsPDF metrics) ─
   let curY = y + 8;
 
-  // L2: Brand name — 10pt bold, auto-wrap, capped by remaining height
+  // L2: Brand name — 10pt bold, ~3.5mm/char, ≤2 lines
   setDocFont(doc, 'bold');
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
-  const brandLines = doc.splitTextToSize(item.drug.brand_name, w);
-  const brandLH = 4;
-  // Reserve minimum space for: ingredient + HK# (~5mm) + 1 usage line (~4mm)
-  let brandMax = Math.min(2, brandLines.length);
-  while (brandMax > 0 && curY + brandMax * brandLH + 9 > maxTextY) {
-    brandMax--;
-  }
+  const brandLines = wrapByChar(item.drug.brand_name, 3.5, w, 2);
+  // Cap lines by vertical space (reserve ~9mm for ing+hk+usage below)
+  let brandMax = Math.min(brandLines.length, 2);
+  while (brandMax > 0 && curY + brandMax * 4 + 9 > maxTextY) brandMax--;
   brandLines.slice(0, brandMax).forEach((line: string) => {
     doc.text(line, x, curY);
-    curY += brandLH;
+    curY += 4;
   });
 
-  // L3: Ingredient — 1 line only if enough room left
+  // L3: Ingredient — 6.5pt, ~2.3mm/char, 1 line
   if (curY + 3 < maxTextY) {
     setDocFont(doc, 'normal');
     doc.setFontSize(6.5);
     doc.setTextColor(0, 0, 0);
     const ing = item.drug.ingredient ? formatIngredientsDisplay(item.drug.ingredient) : '';
     if (ing) {
-      const ingLines = doc.splitTextToSize(ing, w);
-      doc.text(ingLines[0] || '', x, curY + 0.5);
+      const ingLines = wrapByChar(ing, 2.3, w, 1);
+      if (ingLines[0]) doc.text(ingLines[0], x, curY + 0.5);
       curY += 4;
     }
   }
 
-  // HK# — 6pt
+  // HK# — 6pt, ~2.1mm/char, always fits
   if (curY + 2 < maxTextY) {
     doc.setFontSize(6);
     doc.setTextColor(80, 80, 80);
@@ -144,7 +163,7 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     curY += 3;
   }
 
-  // ── L4: Usage — 7pt, word-wrapped, capped by remaining space ────
+  // ── L4: Usage — 7pt, ~2.5mm/char, capped by remaining space ────
   curY += 1;
   if (curY + 3 < maxTextY) {
     setDocFont(doc, 'normal');
@@ -152,21 +171,21 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     doc.setTextColor(0, 0, 0);
     const usageText = item.customUsage || item.drug.default_usage || '';
     if (usageText) {
-      const usageLines = doc.splitTextToSize(usageText, w);
-      const usageLH = 3.5;
       const cautionText = item.customPrecautions || item.drug.default_precautions || '';
       const cautionNeeded = cautionText ? 4 : 0;
-      const usageMax = Math.max(1, Math.min(3, Math.floor((maxTextY - curY - cautionNeeded) / usageLH)));
+      const usageAvail = maxTextY - curY - cautionNeeded;
+      const usageMax = Math.max(1, Math.min(3, Math.floor(usageAvail / 3.5)));
+      const usageLines = wrapByChar(usageText, 2.5, w, usageMax);
       usageLines.slice(0, usageMax).forEach((line: string) => {
-        if (curY + usageLH <= maxTextY) {
+        if (curY + 3.5 <= maxTextY) {
           doc.text(line, x, curY);
-          curY += usageLH;
+          curY += 3.5;
         }
       });
     }
   }
 
-  // Precautions — bold, 6.5pt, bilingual, capped by remaining space
+  // Precautions — bilingual, 6.5pt bold, capped by remaining space
   const cautionText = item.customPrecautions || item.drug.default_precautions || '';
   if (cautionText && curY + 2 < maxTextY) {
     curY += 0.5;
@@ -187,32 +206,38 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
       else { en = line.slice(0, pipeIdx).trim(); zh = line.slice(pipeIdx + 2).trim(); }
       if (!en && !zh) continue;
 
-      const combined = `⚠ ${en}  ${zh}`;
-      let fitsOneLine = true;
-      try { fitsOneLine = doc.getTextWidth(combined) <= w; } catch { fitsOneLine = false; }
-
-      if (fitsOneLine && drawn < maxDraw && curY < maxTextY) {
-        doc.text(combined, x, curY);
-        curY += 3.3;
-        drawn++;
-      } else if (en === zh) {
-        const singleLines = doc.splitTextToSize(`⚠ ${en}`, w);
-        for (const sl of singleLines.slice(0, maxDraw - drawn)) {
+      if (en === zh) {
+        // Single language: char-wrap at 2.3mm/char
+        const sl = wrapByChar(`⚠ ${en}`, 2.3, w, maxDraw - drawn);
+        for (const s of sl) {
           if (curY >= maxTextY) break;
-          doc.text(sl, x, curY);
+          doc.text(s, x, curY);
           curY += 3.3;
           drawn++;
         }
       } else {
-        if (en && drawn < maxDraw && curY < maxTextY) {
-          doc.text(`⚠ ${en}`, x, curY);
+        // Bilingual: try one line "⚠ {en}  {zh}"
+        const combined = `⚠ ${en}  ${zh}`;
+        // Estimate combined width: EN chars at ~2.1mm + ZH at ~2.3mm + ⚠ (~2mm) + spaces
+        const estCombinedW = en.length * 2.1 + zh.length * 2.3 + 5;
+        if (estCombinedW <= w && drawn < maxDraw && curY < maxTextY) {
+          doc.text(combined, x, curY);
           curY += 3.3;
           drawn++;
-        }
-        if (zh && zh !== en && drawn < maxDraw && curY < maxTextY) {
-          doc.text(zh, x, curY);
-          curY += 3.3;
-          drawn++;
+        } else {
+          // Two lines: EN ⚠ upper, ZH below
+          if (en && drawn < maxDraw && curY < maxTextY) {
+            const enLine = wrapByChar(`⚠ ${en}`, 2.3, w, 1)[0];
+            if (enLine) doc.text(enLine, x, curY);
+            curY += 3.3;
+            drawn++;
+          }
+          if (zh && zh !== en && drawn < maxDraw && curY < maxTextY) {
+            const zhLine = wrapByChar(zh, 2.3, w, 1)[0];
+            if (zhLine) doc.text(zhLine, x, curY);
+            curY += 3.3;
+            drawn++;
+          }
         }
       }
     }
