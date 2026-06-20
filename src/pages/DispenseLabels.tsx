@@ -37,7 +37,10 @@ interface LabelRow {
   customUsage: string;
   customPrecautions: string;
   copies: number;
-  copiesText: string; // interim string for editable number input
+  copiesText: string;
+  quantity: number;
+  quantityText: string;
+  unit: string;
 }
 
 let rowIdCounter = 0;
@@ -54,6 +57,9 @@ function createEmptyRow(): LabelRow {
     customPrecautions: '',
     copies: 1,
     copiesText: '1',
+    quantity: 0,
+    quantityText: '',
+    unit: '粒',
   };
 }
 
@@ -103,7 +109,7 @@ export default function DispenseLabelsPage() {
 
   const selectDrug = (rowId: string, drug: Drug) => {
     setRows((prev) =>
-      prev.map((r) => (r.id === rowId ? { ...r, selectedDrug: drug, customUsage: drug.default_usage || '', customPrecautions: drug.default_precautions || '' } : r)),
+      prev.map((r) => (r.id === rowId ? { ...r, selectedDrug: drug, customUsage: drug.default_usage || '', customPrecautions: drug.default_precautions || '', unit: drug.unit || r.unit } : r)),
     );
     setShowDrugPicker(null);
     setPickerPos(null);
@@ -149,6 +155,8 @@ export default function DispenseLabelsPage() {
           date: today,
           pharmacy: profile,
           drug: r.selectedDrug!,
+          quantity: r.quantity > 0 ? r.quantity : 0,
+          unit: r.unit || '',
           customUsage: r.customUsage || undefined,
           customPrecautions: r.customPrecautions || undefined,
         };
@@ -387,6 +395,47 @@ export default function DispenseLabelsPage() {
                 </div>
               </div>
 
+              {/* Quantity & Unit — only when drug selected */}
+              {row.selectedDrug && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      數量 <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={9999}
+                      value={row.quantityText}
+                      onChange={(e) => updateRow(row.id, 'quantityText', e.target.value)}
+                      onBlur={() => {
+                        const v = parseInt(row.quantityText, 10);
+                        if (!isNaN(v) && v >= 1 && v <= 9999) {
+                          updateRow(row.id, 'quantity', v);
+                        } else {
+                          updateRow(row.id, 'quantityText', row.quantity > 0 ? String(row.quantity) : '');
+                        }
+                      }}
+                      placeholder="14"
+                      className="input-modern px-3.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                      單位
+                    </label>
+                    <input
+                      type="text"
+                      value={row.unit}
+                      onChange={(e) => updateRow(row.id, 'unit', e.target.value)}
+                      placeholder="粒"
+                      list="unit-options"
+                      className="input-modern px-3.5"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Custom usage & precautions */}
               {row.selectedDrug && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 border-t border-slate-100">
@@ -486,6 +535,19 @@ export default function DispenseLabelsPage() {
         <HiOutlinePlusCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
         新增標籤
       </button>
+
+      {/* Common unit options for datalist */}
+      <datalist id="unit-options">
+        <option value="粒" />
+        <option value="包" />
+        <option value="毫升" />
+        <option value="支" />
+        <option value="揿" />
+        <option value="瓶" />
+        <option value="片" />
+        <option value="丸" />
+        <option value="劑" />
+      </datalist>
 
       {/* Summary bar */}
       {validRows.length > 0 && profile && (

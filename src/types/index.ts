@@ -13,6 +13,7 @@ export interface Drug {
   ingredient: string;         // each line = "Name, Dosage", e.g. "Pseudoephedrine HCl, 120mg\nLoratadine, 5mg"
   default_usage: string;      // default usage instructions
   default_precautions: string; // default precautions/warnings
+  unit?: string;              // dosage form unit e.g. 粒, 包, 毫升, 支
 }
 
 /** A reusable warning template managed from the Warning Templates page */
@@ -28,6 +29,8 @@ export interface LabelItem {
   date: string;
   pharmacy: PharmacyProfile;
   drug: Drug;
+  quantity: number;           // number of units dispensed, e.g. 14
+  unit: string;               // dosage form unit, e.g. 粒, 包, 毫升
   customUsage?: string;
   /** Newline-separated precautions. Each line is one item, max 3. */
   customPrecautions?: string;

@@ -23,6 +23,7 @@ const emptyForm = {
   ingredient: '',
   default_usage: '',
   default_precautions: '',
+  unit: '',
 };
 
 const USAGE_PRESETS: Record<string, { usage: string; precautions: string }> = {
@@ -85,6 +86,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
         ingredient: drug.ingredient,
         default_usage: drug.default_usage,
         default_precautions: drug.default_precautions,
+        unit: drug.unit || '',
       });
     } else {
       setForm({ ...emptyForm });
@@ -137,7 +139,7 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 品牌名稱 <span className="text-red-400">*</span>
@@ -162,6 +164,30 @@ export default function DrugFormModal({ drug, onSave, onClose }: Props) {
                   選擇品牌名稱會自動填入預設用法
                 </p>
               )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                單位  <span className="text-slate-300 font-normal normal-case">(劑型)</span>
+              </label>
+              <input
+                type="text"
+                value={form.unit}
+                onChange={(e) => update('unit', e.target.value)}
+                placeholder="粒"
+                list="drug-unit-list"
+                className="input-modern px-3.5"
+              />
+              <datalist id="drug-unit-list">
+                <option value="粒" />
+                <option value="包" />
+                <option value="毫升" />
+                <option value="支" />
+                <option value="揿" />
+                <option value="瓶" />
+                <option value="片" />
+                <option value="丸" />
+                <option value="劑" />
+              </datalist>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">

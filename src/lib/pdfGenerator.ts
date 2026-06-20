@@ -45,11 +45,14 @@ function trunc(s: string, max: number, cut: number) {
  * Draw all content inside one label cell.
  *
  * Layout layers (top → bottom within the cell):
- *   L1  Top bar:  Pharmacy name (L)  │  HK# (R)      7pt / 6pt
- *   L2  Drug:     Brand name (bold)  8pt  →  Ingredient  6.5pt
- *   L3  Core:     Usage  7pt  →  ⚠ Precautions (bold, red)  6.5pt
- *   L4  Bottom:   Patient name (bold) L  │  Date R  8pt / 6pt
- *                 Address                           5pt
+ *   L1  Top bar:   Pharmacy name (L)  │  Qty/Unit (R)  7pt / 8pt bold
+ *   L2  Brand name (bold)  10pt
+ *   L3  Ingredient  6.5pt  →  HK#  6pt
+ *   L4  Usage  7pt  →  ⚠ Precautions (bold)  6.5pt
+ *   L5  Bottom:     Patient name (bold) L  │  Date R  8pt / 6pt
+ *                   Address                           5pt
+ *
+ * FULL BLACK & WHITE — no color ink used. Hierarchy via weight & size.
  */
 function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, item: LabelItem) {
   const pad = 1.5;
@@ -58,53 +61,60 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
   const w = cw - pad * 2;
   const h = ch - pad * 2;
 
-  // Cell border
-  doc.setDrawColor(180, 180, 180);
+  // Cell border — thin black
+  doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.3);
   doc.rect(cx, cy, cw, ch);
 
   // ── L1: Top bar ─────────────────────────────────────────────
-  // Pharmacy name — left, 7pt, #464646
+  // Pharmacy name — left, 7pt
   setDocFont(doc, 'normal');
   doc.setFontSize(7);
-  doc.setTextColor(70, 70, 70);
-  doc.text(trunc(item.pharmacy.name, 30, 28), x, y + 2.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(trunc(item.pharmacy.name, 28, 26), x, y + 2.5);
 
-  // HK# — right, 6pt, #828282
-  doc.setFontSize(6);
-  doc.setTextColor(130, 130, 130);
-  doc.text(`HK: ${item.drug.hk_number}`, x + w, y + 2.5, { align: 'right' });
+  // Quantity + Unit — right, 8pt bold, e.g. "14 粒"
+  const unitText = item.quantity ? `${item.quantity} ${item.unit}` : '';
+  if (unitText) {
+    setDocFont(doc, 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text(unitText, x + w, y + 2.5, { align: 'right' });
+  }
 
   // ── L2: Drug info ───────────────────────────────────────────
-  // Brand name — bold, 8pt, #003280
+  // Brand name — bold, 10pt (was 8pt) — bigger for readability
   setDocFont(doc, 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(0, 50, 128);
-  doc.text(trunc(item.drug.brand_name, 38, 36), x, y + 7.5);
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text(trunc(item.drug.brand_name, 28, 26), x, y + 8);
 
-  // Ingredient — 6.5pt, #323232
+  // Ingredient — 6.5pt
   setDocFont(doc, 'normal');
   doc.setFontSize(6.5);
-  doc.setTextColor(50, 50, 50);
+  doc.setTextColor(0, 0, 0);
   const ing = item.drug.ingredient ? formatIngredientsDisplay(item.drug.ingredient) : '';
-  if (ing) doc.text(trunc(ing, 50, 48), x, y + 12);
+  if (ing) doc.text(trunc(ing, 50, 48), x, y + 13);
+
+  // HK# — 6pt (moved from top-right to below ingredient)
+  doc.setFontSize(6);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`HK: ${item.drug.hk_number}`, x, y + 16);
 
   // ── L3: Usage + Precautions ─────────────────────────────────
-  // Bottom-section reserve: address (5pt ≈ 2 mm) + patient/date (8pt ≈ 3 mm)
-  const bottomReserve = 6;     // mm from bottom of content area that is reserved
-  const maxTextY = y + h - bottomReserve;  // last safe baseline for usage/precautions lines
+  const bottomReserve = 6;
+  const maxTextY = y + h - bottomReserve;
 
-  // Usage — 7pt #000, word-wrapped, as many lines as fit
-  let curY = y + 16;
+  // Usage — 7pt, word-wrapped
+  let curY = y + 19;
   setDocFont(doc, 'normal');
   doc.setFontSize(7);
   doc.setTextColor(0, 0, 0);
   const usageText = item.customUsage || item.drug.default_usage || '';
   const usageLines = doc.splitTextToSize(usageText, w);
 
-  // Pre-calculate precaution space so we can cap usage lines
   const cautionText = item.customPrecautions || item.drug.default_precautions || '';
-  const cautionOverhead = cautionText ? 1 + 3.3 * 2 : 0;  // gap (1) + up to 2 lines
+  const cautionOverhead = cautionText ? 1 + 3.3 * 2 : 0;
   const usageLineH = 3.5;
   let maxUsageLines = Math.max(1, Math.floor((maxTextY - curY - cautionOverhead) / usageLineH));
   if (maxUsageLines > 3) maxUsageLines = 3;
@@ -114,11 +124,11 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     curY += usageLineH;
   });
 
-  // Precautions — bold, red, 6.5pt, max 2 lines
+  // Precautions — bold, 6.5pt (black, not red)
   if (cautionText) {
     curY += 0.5;
     if (curY < maxTextY) {
-      doc.setTextColor(180, 30, 30);
+      doc.setTextColor(0, 0, 0);
       setDocFont(doc, 'bold');
       doc.setFontSize(6.5);
       const cautionLines = doc.splitTextToSize(cautionText, w);
@@ -131,11 +141,11 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
   }
 
   // ── L4: Bottom bar ──────────────────────────────────────────
-  // Address — far bottom, 5pt, #969696
+  // Address — far bottom, 5pt
   const addrY = y + h - 0.5;
   setDocFont(doc, 'normal');
   doc.setFontSize(5);
-  doc.setTextColor(150, 150, 150);
+  doc.setTextColor(100, 100, 100);
   doc.text(trunc(item.pharmacy.address, 60, 58), x, addrY);
 
   // Patient name (bold, 8pt, left) + Date (6pt, right)
@@ -175,9 +185,9 @@ export async function generateLabelPDF(
       // 1. Draw empty grid outlines (light fill + thin border)
       const gridPos = getPositions(config, itemsPerPage);
       gridPos.forEach((pos) => {
-        doc.setFillColor(248, 248, 248);
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.2);
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.1);
         doc.rect(pos.x, pos.y, pos.w, pos.h, 'FD');
       });
       // 2. Draw filled labels on top
@@ -196,7 +206,7 @@ export async function generateLabelPDF(
 
     // Page footer
     doc.setFontSize(4);
-    doc.setTextColor(200, 200, 200);
+    doc.setTextColor(150, 150, 150);
     doc.text(`藥物標籤列印系統 - 第 ${pg + 1} 頁`, A4_W - 5, A4_H - 3, { align: 'right' });
   }
 
