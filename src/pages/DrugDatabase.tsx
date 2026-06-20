@@ -14,6 +14,7 @@ import { fetchDrugs, createDrug, updateDrug, deleteDrug } from '../lib/supabase'
 import { isSupabaseConfigured } from '../lib/supabase';
 import { formatIngredientsDisplay } from '../components/IngredientEditor';
 import type { Drug } from '../types';
+import { saveDrugUnit, loadDrugUnit } from '../lib/storage';
 import DrugFormModal from '../components/DrugForm';
 
 export default function DrugDatabasePage() {
@@ -39,7 +40,12 @@ export default function DrugDatabasePage() {
       setLoading(true);
       setError('');
       const data = await fetchDrugs(q || undefined);
-      setDrugs(data);
+      // Merge localStorage unit fallback into loaded drugs
+      const merged = data.map(d => ({
+        ...d,
+        unit: d.unit || loadDrugUnit(d) || '',
+      }));
+      setDrugs(merged);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load drugs');
     } finally {
@@ -58,7 +64,9 @@ export default function DrugDatabasePage() {
 
   const handleCreate = async (data: Omit<Drug, 'id' | 'created_at'>) => {
     try {
-      await createDrug(data);
+      const { unit, ...dbData } = data;
+      const created = await createDrug(dbData);
+      if (unit && created?.id) saveDrugUnit(created.id, created.brand_name, unit);
       showToast('success', '藥物已新增');
       setShowForm(false);
       loadDrugs(search);
@@ -69,7 +77,13 @@ export default function DrugDatabasePage() {
 
   const handleUpdate = async (id: number, data: Partial<Omit<Drug, 'id' | 'created_at'>>) => {
     try {
-      await updateDrug(id, data);
+      const { unit, ...dbData } = data;
+      await updateDrug(id, dbData);
+      if (unit) {
+        // Load current drug to get brand_name for localStorage key
+        const current = drugs.find(d => d.id === id);
+        if (current) saveDrugUnit(id, current.brand_name, unit);
+      }
       showToast('success', '藥物已更新');
       setEditingDrug(null);
       setShowForm(false);

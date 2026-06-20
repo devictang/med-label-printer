@@ -1,7 +1,8 @@
-import type { PharmacyProfile, LabelGridConfig } from '../types';
+import type { PharmacyProfile, LabelGridConfig, Drug } from '../types';
 
 const PROFILE_KEY = 'med-label-printer:profile';
 const GRID_KEY = 'med-label-printer:grid-config';
+const DRUG_UNITS_KEY = 'med-label-printer:drug-units';
 
 /** Save pharmacy profile to localStorage */
 export function saveProfile(profile: PharmacyProfile): void {
@@ -35,5 +36,32 @@ export function loadGridConfig(): LabelGridConfig | null {
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
+  }
+}
+
+/** Save a drug's unit to localStorage (fallback when Supabase column doesn't exist yet) */
+export function saveDrugUnit(drugId: number | undefined, brandName: string, unit: string): void {
+  if (!unit) return;
+  try {
+    const raw = localStorage.getItem(DRUG_UNITS_KEY);
+    const units: Record<string, string> = raw ? JSON.parse(raw) : {};
+    const key = drugId ? `id:${drugId}` : `name:${brandName}`;
+    units[key] = unit;
+    localStorage.setItem(DRUG_UNITS_KEY, JSON.stringify(units));
+  } catch { /* ignore */ }
+}
+
+/** Load a drug's unit from localStorage fallback */
+export function loadDrugUnit(drug: Drug): string | undefined {
+  try {
+    const raw = localStorage.getItem(DRUG_UNITS_KEY);
+    if (!raw) return undefined;
+    const units: Record<string, string> = JSON.parse(raw);
+    // Try by ID first, then by name
+    if (drug.id && units[`id:${drug.id}`]) return units[`id:${drug.id}`];
+    if (units[`name:${drug.brand_name}`]) return units[`name:${drug.brand_name}`];
+    return undefined;
+  } catch {
+    return undefined;
   }
 }
