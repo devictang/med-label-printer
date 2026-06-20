@@ -16,7 +16,7 @@ export function parseIngredients(value: string): IngredientEntry[] {
       const commaIdx = line.lastIndexOf(',');
       if (commaIdx === -1) return { name: line, dosage: '' };
       return {
-        name: line.slice(0, commaIdx).trim(),
+        name: line.slice(0, commaIdx),     // preserve user-typed spaces
         dosage: line.slice(commaIdx + 1).trim(),
       };
     });
@@ -57,7 +57,7 @@ export default function IngredientEditor({ value, onChange }: IngredientEditorPr
       onChange(ingredientsToString(updated));
     } else if (field === 'name' && val.trim()) {
       // Typing in the empty trailing row — auto-add new entry
-      const newEntry: IngredientEntry = { name: val.trim(), dosage: '' };
+      const newEntry: IngredientEntry = { name: val, dosage: '' };
       onChange(ingredientsToString([...entries, newEntry]));
     }
   };
