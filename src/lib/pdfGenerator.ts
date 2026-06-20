@@ -44,11 +44,13 @@ function trunc(s: string, max: number, cut: number) {
 /**
  * Draw all content inside one label cell.
  *
- * Layout layers (top → bottom within the cell):
+ * Layout flows top→bottom with dynamic Y tracking so every text
+ * auto-wraps within the cell width and never overflows the label boundary.
+ *
  *   L1  Top bar:   Pharmacy name (L)  │  Qty/Unit (R)  7pt / 8pt bold
- *   L2  Brand name (bold)  10pt
- *   L3  Ingredient  6.5pt  →  HK#  6pt
- *   L4  Usage  7pt  →  ⚠ Precautions (bold)  6.5pt
+ *   L2  Brand name (bold, 10pt, auto-wrap ≤2 lines)
+ *   L3  Ingredient (6.5pt, auto-wrap ≤1 line)  →  HK# (6pt)
+ *   L4  Usage (7pt, auto-wrap)  →  ⚠ Precautions (bold, 6.5pt, bilingual)
  *   L5  Bottom:     Patient name (bold) L  │  Date R  8pt / 6pt
  *                   Address                           5pt
  *
@@ -67,46 +69,59 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
   doc.rect(cx, cy, cw, ch);
 
   // ── L1: Top bar ─────────────────────────────────────────────
+  const topY = y + 2.5;
   // Pharmacy name — left, 7pt
   setDocFont(doc, 'normal');
   doc.setFontSize(7);
   doc.setTextColor(0, 0, 0);
-  doc.text(trunc(item.pharmacy.name, 28, 26), x, y + 2.5);
+  doc.text(trunc(item.pharmacy.name, 28, 26), x, topY);
 
   // Quantity + Unit — right, 8pt bold, e.g. "14 粒"
-  const unitText = item.quantity ? `${item.quantity} ${item.unit}` : '';
-  if (unitText) {
+  if (item.quantity) {
     setDocFont(doc, 'bold');
     doc.setFontSize(8);
     doc.setTextColor(0, 0, 0);
-    doc.text(unitText, x + w, y + 2.5, { align: 'right' });
+    doc.text(`${item.quantity} ${item.unit}`, x + w, topY, { align: 'right' });
   }
 
-  // ── L2: Drug info ───────────────────────────────────────────
-  // Brand name — bold, 10pt (was 8pt) — bigger for readability
+  // ── L2: Brand name — bold, 10pt, auto-wrap if too wide ──────
+  let curY = y + 8;
   setDocFont(doc, 'bold');
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
-  doc.text(trunc(item.drug.brand_name, 28, 26), x, y + 8);
+  const brandLines = doc.splitTextToSize(item.drug.brand_name, w);
+  const brandLH = 4; // line height for 10pt
+  brandLines.slice(0, 2).forEach((line: string) => {
+    doc.text(line, x, curY);
+    curY += brandLH;
+  });
 
-  // Ingredient — 6.5pt
+  // ── L3: Ingredient (≤1 line) + HK# ──────────────────────────
+  const ingY = curY + 0.5;
   setDocFont(doc, 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(0, 0, 0);
   const ing = item.drug.ingredient ? formatIngredientsDisplay(item.drug.ingredient) : '';
-  if (ing) doc.text(trunc(ing, 50, 48), x, y + 13);
+  if (ing) {
+    const ingLines = doc.splitTextToSize(ing, w);
+    doc.text(ingLines[0] || '', x, ingY);
+    curY = ingY + 4.5;
+  } else {
+    curY = ingY + 1;
+  }
 
-  // HK# — 6pt (hk_number already contains "HK-" prefix)
+  // HK# — 6pt
   doc.setFontSize(6);
   doc.setTextColor(80, 80, 80);
-  doc.text(item.drug.hk_number, x, y + 16);
+  doc.text(item.drug.hk_number, x, curY);
+  const hkY = curY;
 
-  // ── L3: Usage + Precautions ─────────────────────────────────
+  // ── L4: Usage + Precautions ─────────────────────────────────
   const bottomReserve = 6;
   const maxTextY = y + h - bottomReserve;
 
-  // Usage — 7pt, word-wrapped (extra gap after HK#)
-  let curY = y + 20.5;
+  // Usage — 7pt, word-wrapped
+  curY = hkY + 4.5;
   setDocFont(doc, 'normal');
   doc.setFontSize(7);
   doc.setTextColor(0, 0, 0);
@@ -124,7 +139,7 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     curY += usageLineH;
   });
 
-  // Precautions — bold, 6.5pt (black) — bilingual: EN first, ZH below if too long
+  // Precautions — bold, 6.5pt — bilingual: EN first, ZH below if too long
   if (cautionText) {
     curY += 0.5;
     if (curY < maxTextY) {
@@ -134,41 +149,32 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
 
       const precautionLines = cautionText.split('\n').map((l) => l.trim()).filter(Boolean);
       let drawn = 0;
-      const maxDraw = 2; // max total lines on label
+      const maxDraw = 2;
 
       for (const line of precautionLines) {
         if (drawn >= maxDraw || curY >= maxTextY) break;
 
-        // Parse bilingual pair
         const pipeIdx = line.indexOf('||');
         let en: string, zh: string;
         if (pipeIdx === -1) {
-          // Single language (backward compat) — treat as both
-          en = line;
-          zh = line;
+          en = line; zh = line;
         } else {
           en = line.slice(0, pipeIdx).trim();
           zh = line.slice(pipeIdx + 2).trim();
         }
-
         if (!en && !zh) continue;
 
         // Try to fit EN + ZH on one line
         const combined = `⚠ ${en}  ${zh}`;
         let fitsOneLine = true;
-        try {
-          fitsOneLine = doc.getTextWidth(combined) <= w;
-        } catch {
-          // getTextWidth may fail with some fonts — fall back to single-line
-          fitsOneLine = false;
-        }
+        try { fitsOneLine = doc.getTextWidth(combined) <= w; } catch { fitsOneLine = false; }
 
         if (fitsOneLine && drawn < maxDraw && curY < maxTextY) {
           doc.text(combined, x, curY);
           curY += 3.3;
           drawn++;
         } else if (en === zh) {
-          // Single language: auto-wrap like before
+          // Single language: auto-wrap
           const singleLines = doc.splitTextToSize(`⚠ ${en}`, w);
           for (const sl of singleLines.slice(0, maxDraw - drawn)) {
             if (curY >= maxTextY) break;
@@ -177,7 +183,7 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
             drawn++;
           }
         } else {
-          // Two-line mode: EN on first line, ZH on second
+          // Two-line mode: EN on first, ZH on second
           if (en && drawn < maxDraw && curY < maxTextY) {
             doc.text(`⚠ ${en}`, x, curY);
             curY += 3.3;
@@ -193,15 +199,13 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
     }
   }
 
-  // ── L4: Bottom bar ──────────────────────────────────────────
-  // Address — far bottom, 5pt
+  // ── L5: Bottom bar ──────────────────────────────────────────
   const addrY = y + h - 0.5;
   setDocFont(doc, 'normal');
   doc.setFontSize(5);
   doc.setTextColor(100, 100, 100);
   doc.text(trunc(item.pharmacy.address, 60, 58), x, addrY);
 
-  // Patient name (bold, 8pt, left) + Date (6pt, right)
   const infoY = addrY - 4;
   setDocFont(doc, 'bold');
   doc.setFontSize(8);
