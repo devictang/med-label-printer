@@ -96,17 +96,17 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
   const ing = item.drug.ingredient ? formatIngredientsDisplay(item.drug.ingredient) : '';
   if (ing) doc.text(trunc(ing, 50, 48), x, y + 13);
 
-  // HK# — 6pt (moved from top-right to below ingredient)
+  // HK# — 6pt (hk_number already contains "HK-" prefix)
   doc.setFontSize(6);
   doc.setTextColor(80, 80, 80);
-  doc.text(`HK: ${item.drug.hk_number}`, x, y + 16);
+  doc.text(item.drug.hk_number, x, y + 16);
 
   // ── L3: Usage + Precautions ─────────────────────────────────
   const bottomReserve = 6;
   const maxTextY = y + h - bottomReserve;
 
-  // Usage — 7pt, word-wrapped
-  let curY = y + 19;
+  // Usage — 7pt, word-wrapped (extra gap after HK#)
+  let curY = y + 20.5;
   setDocFont(doc, 'normal');
   doc.setFontSize(7);
   doc.setTextColor(0, 0, 0);
