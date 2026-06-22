@@ -31,44 +31,58 @@ interface CreatedProposal {
 export async function submitProposals(
   proposals: { proposalType: string; payload: Record<string, unknown> }[],
 ): Promise<{ ok: boolean; results: { localIndex: number; proposalId?: number; error?: string }[] }> {
+  console.log('[submitProposals] Submitting', proposals.length, 'proposal(s) to', OYX_APP_URL);
   const results: { localIndex: number; proposalId?: number; error?: string }[] = [];
 
   for (let i = 0; i < proposals.length; i++) {
     const { proposalType, payload } = proposals[i];
+    const body = JSON.stringify({
+      app_slug: 'med-label-printer',
+      proposal_type: proposalType,
+      payload,
+    });
+    console.log(`[submitProposals] #${i} POST`, `${OYX_APP_URL}/api/proposals`);
+    console.log(`[submitProposals] #${i} Request body:`, body);
+
     try {
       const res = await fetch(`${OYX_APP_URL}/api/proposals`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          app_slug: 'med-label-printer',
-          proposal_type: proposalType,
-          payload,
-        }),
+        body,
       });
+
+      console.log(`[submitProposals] #${i} Response status:`, res.status, res.statusText);
+
+      // Always read the raw response text first for debugging
+      const rawText = await res.text();
+      console.log(`[submitProposals] #${i} Raw response (${rawText.length} chars):`, rawText.slice(0, 500));
 
       let data: ProposalsApiResponse<CreatedProposal>;
       try {
-        data = await res.json();
+        data = JSON.parse(rawText);
       } catch {
-        // Response body not JSON — read as text for debugging
-        const text = await res.text().catch(() => '(empty body)');
-        results.push({ localIndex: i, error: `HTTP ${res.status}: ${text.slice(0, 200)}` });
+        results.push({ localIndex: i, error: `HTTP ${res.status}: ${rawText.slice(0, 200) || '(empty body)'}` });
         continue;
       }
 
       if (!res.ok || !data.ok) {
+        console.warn(`[submitProposals] #${i} API returned error:`, data.error || `HTTP ${res.status}`);
         results.push({ localIndex: i, error: data.error || `HTTP ${res.status}` });
       } else if (data.proposal) {
+        console.log(`[submitProposals] #${i} Success, proposalId:`, data.proposal.id);
         results.push({ localIndex: i, proposalId: data.proposal.id });
       } else {
+        console.warn(`[submitProposals] #${i} Unexpected response format (no proposal field):`, data);
         results.push({ localIndex: i, error: 'Unexpected response format' });
       }
     } catch (err) {
+      console.error(`[submitProposals] #${i} Fetch/network error:`, err);
       results.push({ localIndex: i, error: err instanceof Error ? err.message : 'Network error' });
     }
   }
 
+  console.log('[submitProposals] Results:', results);
   return { ok: results.every((r) => r.proposalId !== undefined), results };
 }
 
@@ -103,13 +117,19 @@ export async function checkOyxAuth(): Promise<{
   email?: string;
   name?: string;
 }> {
+  const url = `${OYX_APP_URL}/api/proposals?app=med-label-printer&limit=1`;
+  console.log('[checkOyxAuth] GET', url);
   try {
-    const res = await fetch(`${OYX_APP_URL}/api/proposals?app=med-label-printer&limit=1`, {
+    const res = await fetch(url, {
       credentials: 'include',
     });
-    if (res.ok) return { authenticated: true };
+    console.log('[checkOyxAuth] Response status:', res.status);
+    const ok = res.ok;
+    console.log('[checkOyxAuth] authenticated:', ok);
+    if (ok) return { authenticated: true };
     return { authenticated: false };
-  } catch {
+  } catch (err) {
+    console.error('[checkOyxAuth] Network error:', err);
     return { authenticated: false };
   }
 }
