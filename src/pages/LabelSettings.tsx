@@ -6,7 +6,7 @@ import {
   HiOutlineScale,
   HiOutlineAdjustmentsHorizontal,
 } from 'react-icons/hi2';
-import { saveGridConfig, saveFontScale, loadFontScale } from '../lib/storage';
+import { saveGridConfig, saveFontScale, loadFontScale, loadGridConfig } from '../lib/storage';
 import type { LabelGridConfig } from '../types';
 import { DEFAULT_GRID, PRESET_GRIDS } from '../types';
 
@@ -16,13 +16,7 @@ export default function LabelSettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const savedStr = localStorage.getItem('med-label-printer:grid-config');
-    if (savedStr) {
-      try {
-        const parsed = JSON.parse(savedStr) as LabelGridConfig;
-        setConfig(parsed);
-      } catch {}
-    }
+    setConfig(loadGridConfig());
     setFontScale(loadFontScale());
   }, []);
 
@@ -110,23 +104,68 @@ export default function LabelSettingsPage() {
               <HiOutlineScale className="w-3.5 h-3.5 text-indigo-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-700">詳細設定</h3>
+              <h3 className="text-sm font-semibold text-slate-700">進階設定</h3>
               <p className="text-[10px] text-slate-400">所有數值單位為毫米 (mm)</p>
             </div>
           </div>
         </div>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <Field label="行數 (Rows)" value={config.rows} onChange={(v) => update('rows', v)} min={1} max={20} />
-          <Field label="列數 (Cols)" value={config.cols} onChange={(v) => update('cols', v)} min={1} max={10} />
-          <Field label="標籤寬度" value={config.labelWidth} onChange={(v) => update('labelWidth', v)} min={10} max={210} step={0.1} />
-          <Field label="標籤高度" value={config.labelHeight} onChange={(v) => update('labelHeight', v)} min={10} max={297} step={0.1} />
-          <Field label="上邊距" value={config.marginTop} onChange={(v) => update('marginTop', v)} min={0} max={50} step={0.5} />
-          <Field label="下邊距" value={config.marginBottom} onChange={(v) => update('marginBottom', v)} min={0} max={50} step={0.5} />
-          <Field label="左邊距" value={config.marginLeft} onChange={(v) => update('marginLeft', v)} min={0} max={50} step={0.5} />
-          <Field label="右邊距" value={config.marginRight} onChange={(v) => update('marginRight', v)} min={0} max={50} step={0.5} />
-          <Field label="水平間距" value={config.gapX} onChange={(v) => update('gapX', v)} min={0} max={20} step={0.5} />
-          <Field label="垂直間距" value={config.gapY} onChange={(v) => update('gapY', v)} min={0} max={20} step={0.5} />
+        {/* Grid size */}
+        <div className="px-6 pt-5 pb-2">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+            標籤紙格數
+            <span className="text-[10px] font-normal normal-case text-slate-400">— 每頁 A4 分為幾行幾列</span>
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="行數 (Rows)" value={config.rows} onChange={(v) => update('rows', v)} min={1} max={20} />
+            <Field label="列數 (Cols)" value={config.cols} onChange={(v) => update('cols', v)} min={1} max={10} />
+            <Field label="標籤寬度" value={config.labelWidth} onChange={(v) => update('labelWidth', v)} min={10} max={210} step={0.1} />
+            <Field label="標籤高度" value={config.labelHeight} onChange={(v) => update('labelHeight', v)} min={10} max={297} step={0.1} />
+          </div>
+        </div>
+
+        {/* A4 margins */}
+        <div className="px-6 pt-4 pb-2 border-t border-slate-100">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+            A4 紙張邊距
+            <span className="text-[10px] font-normal normal-case text-slate-400">— 標籤區域離紙張邊緣的距離</span>
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="上邊距 (Top)" desc="第一行離 A4 頂部" value={config.marginTop} onChange={(v) => update('marginTop', v)} min={0} max={50} step={0.5} />
+            <Field label="下邊距 (Bottom)" desc="最後一行離 A4 底部" value={config.marginBottom} onChange={(v) => update('marginBottom', v)} min={0} max={50} step={0.5} />
+            <Field label="左邊距 (Left)" desc="第一列離 A4 左邊" value={config.marginLeft} onChange={(v) => update('marginLeft', v)} min={0} max={50} step={0.5} />
+            <Field label="右邊距 (Right)" desc="最後一列離 A4 右邊" value={config.marginRight} onChange={(v) => update('marginRight', v)} min={0} max={50} step={0.5} />
+          </div>
+        </div>
+
+        {/* Label inner padding */}
+        <div className="px-6 pt-4 pb-2 border-t border-slate-100">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+            標籤內邊距
+            <span className="text-[10px] font-normal normal-case text-slate-400">— 內容離標籤邊緣的距離，避免列印時被裁切</span>
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="上內邊距 (Padding Top)" desc="內容離標籤頂部" value={config.paddingTop} onChange={(v) => update('paddingTop', v)} min={0} max={15} step={0.5} />
+            <Field label="下內邊距 (Padding Bottom)" desc="內容離標籤底部" value={config.paddingBottom} onChange={(v) => update('paddingBottom', v)} min={0} max={15} step={0.5} />
+            <Field label="左內邊距 (Padding Left)" desc="內容離標籤左邊" value={config.paddingLeft} onChange={(v) => update('paddingLeft', v)} min={0} max={15} step={0.5} />
+            <Field label="右內邊距 (Padding Right)" desc="內容離標籤右邊" value={config.paddingRight} onChange={(v) => update('paddingRight', v)} min={0} max={15} step={0.5} />
+          </div>
+        </div>
+
+        {/* Gaps */}
+        <div className="px-6 pt-4 pb-5 border-t border-slate-100">
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+            標籤間距
+            <span className="text-[10px] font-normal normal-case text-slate-400">— 相鄰標籤之間的空白距離</span>
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="水平間距 (Gap X)" desc="左右相鄰標籤的間距" value={config.gapX} onChange={(v) => update('gapX', v)} min={0} max={20} step={0.5} />
+            <Field label="垂直間距 (Gap Y)" desc="上下相鄰標籤的間距" value={config.gapY} onChange={(v) => update('gapY', v)} min={0} max={20} step={0.5} />
+          </div>
         </div>
 
         <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
@@ -256,6 +295,7 @@ export default function LabelSettingsPage() {
 
 function Field({
   label,
+  desc,
   value,
   onChange,
   min,
@@ -263,6 +303,7 @@ function Field({
   step,
 }: {
   label: string;
+  desc?: string;
   value: number;
   onChange: (v: number) => void;
   min: number;
@@ -295,6 +336,9 @@ function Field({
       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
         {label}
       </label>
+      {desc && (
+        <p className="text-[10px] text-slate-400 mb-1 leading-tight">{desc}</p>
+      )}
       <div className="flex items-center gap-2">
         <input
           type="number"

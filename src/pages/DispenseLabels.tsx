@@ -81,8 +81,7 @@ export default function DispenseLabelsPage() {
   useEffect(() => {
     const p = loadProfile();
     setProfile(p);
-    const g = loadGridConfig();
-    if (g) setGridConfig(g);
+    setGridConfig(loadGridConfig());
     // Restore saved form state
     const savedRows = loadLabelFormRows();
     if (savedRows && savedRows.length > 0) {

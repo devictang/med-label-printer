@@ -1,4 +1,5 @@
 import type { PharmacyProfile, LabelGridConfig, Drug } from '../types';
+import { DEFAULT_GRID } from '../types';
 
 const PROFILE_KEY = 'med-label-printer:profile';
 const GRID_KEY = 'med-label-printer:grid-config';
@@ -32,13 +33,16 @@ export function saveGridConfig(config: LabelGridConfig): void {
   localStorage.setItem(GRID_KEY, JSON.stringify(config));
 }
 
-/** Load label grid configuration */
-export function loadGridConfig(): LabelGridConfig | null {
+/** Load label grid configuration (merges with defaults for backward compat) */
+export function loadGridConfig(): LabelGridConfig {
   try {
     const raw = localStorage.getItem(GRID_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return { ...DEFAULT_GRID };
+    const parsed = JSON.parse(raw);
+    // Merge with defaults so new fields have fallback values
+    return { ...DEFAULT_GRID, ...parsed };
   } catch {
-    return null;
+    return { ...DEFAULT_GRID };
   }
 }
 

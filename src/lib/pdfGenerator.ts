@@ -50,13 +50,12 @@ function getPositions(config: LabelGridConfig, count: number) {
  *
  * FULL BLACK & WHITE — no color ink used. Hierarchy via weight & size.
  */
-function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, item: LabelItem) {
+function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, item: LabelItem, config: LabelGridConfig) {
   const fs = loadFontScale();
-  const pad = 1.5;
-  const x = cx + pad;
-  const y = cy + pad;
-  const w = cw - pad * 2;
-  const h = ch - pad * 2;
+  const x = cx + config.paddingLeft;
+  const y = cy + config.paddingTop;
+  const w = cw - config.paddingLeft - config.paddingRight;
+  const h = ch - config.paddingTop - config.paddingBottom;
 
   // Cell border
   doc.setDrawColor(0, 0, 0);
@@ -211,13 +210,13 @@ export async function generateLabelPDF(
       // 2. Draw filled labels on top
       pageItems.forEach((item, idx) => {
         if (idx < allPos.length) {
-          drawLabel(doc, allPos[idx].x, allPos[idx].y, allPos[idx].w, allPos[idx].h, item);
+          drawLabel(doc, allPos[idx].x, allPos[idx].y, allPos[idx].w, allPos[idx].h, item, config);
         }
       });
     } else {
       allPos.forEach((pos, idx) => {
         if (idx < pageItems.length) {
-          drawLabel(doc, pos.x, pos.y, pos.w, pos.h, pageItems[idx]);
+          drawLabel(doc, pos.x, pos.y, pos.w, pos.h, pageItems[idx], config);
         }
       });
     }
