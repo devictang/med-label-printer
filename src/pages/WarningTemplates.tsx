@@ -64,13 +64,13 @@ export default function WarningTemplatesPage() {
     load();
   }, [load]);
 
-  // Poll proposal status so admin edits are reflected once approved
+  // Check proposal status on page load so admin edits are reflected
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (supabaseOk) {
       syncProposalStatus().then(() => load()).catch(() => {});
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [load]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ─── Local-first CRUD + auto-submit ─────────────────────── */
 

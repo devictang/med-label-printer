@@ -64,20 +64,20 @@ export default function DrugDatabasePage() {
     loadMerged();
   }, [loadMerged]);
 
+  // Check proposal status on page load so admin edits are reflected
+  useEffect(() => {
+    if (supabaseOk) {
+      syncProposalStatus().then(() => loadMerged(search)).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       loadMerged(search);
     }, 300);
     return () => clearTimeout(timer);
   }, [search, loadMerged]);
-
-  // Poll proposal status so admin edits are reflected once approved
-  useEffect(() => {
-    const interval = setInterval(() => {
-      syncProposalStatus().then(() => loadMerged(search)).catch(() => {});
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [loadMerged, search]);
 
   /* ─── CRUD handlers — localStorage-first + auto-submit ──── */
 
