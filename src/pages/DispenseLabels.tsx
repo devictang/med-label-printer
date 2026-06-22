@@ -12,17 +12,17 @@ import {
   HiOutlineChevronDown,
   HiOutlineCheck,
   HiOutlineDocumentText,
+  HiOutlineArrowUturnLeft,
 } from 'react-icons/hi2';
-import { loadProfile } from '../lib/storage';
-import { fetchDrugs, fetchWarningTemplates } from '../lib/supabase';
-import { isSupabaseConfigured } from '../lib/supabase';
-import { mergeDrugs } from '../lib/localPending';
+import { loadProfile, loadGridConfig, saveLabelFormRows, loadLabelFormRows, clearLabelFormRows, saveLabelRecord } from '../lib/storage';
+import type { Drug, PharmacyProfile, LabelItem, LabelGridConfig } from '../types';
+import { DEFAULT_GRID } from '../types';
 import { downloadLabelPDF, previewLabelPDF } from '../lib/pdfGenerator';
 import PrecautionEditor from '../components/PrecautionEditor';
+import LabelHistory from '../components/LabelHistory';
 import { formatIngredientsDisplay } from '../components/IngredientEditor';
-import type { Drug, PharmacyProfile, LabelItem, LabelGridConfig } from '../types';
-import { loadGridConfig } from '../lib/storage';
-import { DEFAULT_GRID } from '../types';
+import { fetchDrugs, fetchWarningTemplates, isSupabaseConfigured } from '../lib/supabase';
+import { mergeDrugs } from '../lib/localPending';
 
 /** Fallback warnings when Supabase is not connected. */
 const FALLBACK_WARNINGS = [
@@ -83,6 +83,11 @@ export default function DispenseLabelsPage() {
     setProfile(p);
     const g = loadGridConfig();
     if (g) setGridConfig(g);
+    // Restore saved form state
+    const savedRows = loadLabelFormRows();
+    if (savedRows && savedRows.length > 0) {
+      setRows(savedRows as LabelRow[]);
+    }
   }, []);
 
   useEffect(() => {
@@ -95,6 +100,11 @@ export default function DispenseLabelsPage() {
       .then((data) => setTemplates(data.map((t) => `${t.text_en}||${t.text_zh}`)))
       .catch(() => {});
   }, [supabaseOk]);
+
+  // Auto-save form state so it survives page navigation
+  useEffect(() => {
+    saveLabelFormRows(rows);
+  }, [rows]);
 
   const addRow = () => setRows((prev) => [...prev, createEmptyRow()]);
 
@@ -171,12 +181,14 @@ export default function DispenseLabelsPage() {
   const handlePreview = async () => {
     const items = buildLabelItems();
     if (items.length === 0) return;
+    saveLabelRecord(rows);
     await previewLabelPDF(items, gridConfig);
   };
 
   const handleDownload = async () => {
     const items = buildLabelItems();
     if (items.length === 0) return;
+    saveLabelRecord(rows);
     setGenerating(true);
     try {
       await downloadLabelPDF(items, gridConfig);
@@ -190,6 +202,18 @@ export default function DispenseLabelsPage() {
   const labelsPerPage = gridConfig.cols * gridConfig.rows;
   const totalPages = Math.ceil(totalLabels / labelsPerPage);
   const hasProfile = !!profile;
+
+  const handleReset = () => {
+    if (rows.some(r => r.patientName || r.selectedDrug)) {
+      if (!confirm('確定重設所有標籤內容？此操作無法復原。')) return;
+    }
+    setRows([createEmptyRow()]);
+    clearLabelFormRows();
+  };
+
+  const handleLoadRecord = (savedRows: unknown[]) => {
+    setRows(savedRows as LabelRow[]);
+  };
 
   return (
     <div className="space-y-6 stagger-children">
@@ -217,6 +241,14 @@ export default function DispenseLabelsPage() {
 
         {validRows.length > 0 && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              className="btn-modern bg-white border border-slate-200 text-slate-500 hover:text-red-500 hover:border-red-200 hover:bg-red-50 shadow-sm"
+              title="重設所有標籤"
+            >
+              <HiOutlineArrowUturnLeft className="w-4 h-4" />
+              重設
+            </button>
             <button
               onClick={handlePreview}
               disabled={generating}
@@ -552,6 +584,9 @@ export default function DispenseLabelsPage() {
         <option value="丸" />
         <option value="劑" />
       </datalist>
+
+      {/* Label history */}
+      <LabelHistory onLoadRecord={handleLoadRecord} />
 
       {/* Summary bar */}
       {validRows.length > 0 && profile && (
