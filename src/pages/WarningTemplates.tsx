@@ -10,19 +10,26 @@ import {
 } from 'react-icons/hi2';
 import {
   fetchWarningTemplates,
-  createWarningTemplate,
-  updateWarningTemplate,
-  deleteWarningTemplate,
   isSupabaseConfigured,
 } from '../lib/supabase';
 import type { WarningTemplate } from '../types';
+import {
+  addPendingChange,
+  removePendingChange,
+  mergeWarningTemplates,
+  getDraftChanges,
+  markAsSubmitted,
+  updatePendingChangePayload,
+  type MergedWarningTemplate,
+} from '../lib/localPending';
+import { submitProposals, checkOyxAuth } from '../lib/proposals';
 
 export default function WarningTemplatesPage() {
-  const [templates, setTemplates] = useState<WarningTemplate[]>([]);
+  const [templates, setTemplates] = useState<MergedWarningTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editEn, setEditEn] = useState('');
   const [editZh, setEditZh] = useState('');
   const [newEn, setNewEn] = useState('');
@@ -30,18 +37,21 @@ export default function WarningTemplatesPage() {
 
   const supabaseOk = isSupabaseConfigured();
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
   };
 
   const load = useCallback(async () => {
-    if (!supabaseOk) { setLoading(false); return; }
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
-      setError('');
-      const data = await fetchWarningTemplates();
-      setTemplates(data);
+      let base: WarningTemplate[] = [];
+      if (supabaseOk) {
+        base = await fetchWarningTemplates();
+      }
+      const merged = mergeWarningTemplates(base);
+      setTemplates(merged);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
     } finally {
@@ -49,53 +59,106 @@ export default function WarningTemplatesPage() {
     }
   }, [supabaseOk]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  /* ─── Local-first CRUD + auto-submit ─────────────────────── */
 
   const handleAdd = async () => {
     const en = newEn.trim();
     const zh = newZh.trim();
     if (!en && !zh) return;
-    try {
-      await createWarningTemplate({ text_en: en, text_zh: zh });
-      showToast('success', '注意事項已新增');
-      setNewEn('');
-      setNewZh('');
-      load();
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : '新增失敗');
-    }
+    addPendingChange('warning_create', { text_en: en, text_zh: zh });
+    setNewEn('');
+    setNewZh('');
+    await autoSubmitAndToast('注意事項已新增');
+    load();
   };
 
-  const handleUpdate = async (id: number) => {
+  const handleUpdate = async (id: number | string) => {
     const en = editEn.trim();
     const zh = editZh.trim();
     if (!en && !zh) return;
-    try {
-      await updateWarningTemplate(id, { text_en: en, text_zh: zh });
-      showToast('success', '注意事項已更新');
-      setEditingId(null);
-      setEditEn('');
-      setEditZh('');
-      load();
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : '更新失敗');
+
+    if (typeof id === 'string') {
+      updatePendingChangePayload(id, { text_en: en, text_zh: zh });
+    } else {
+      addPendingChange('warning_update', { id, text_en: en, text_zh: zh });
     }
+
+    setEditingId(null);
+    setEditEn('');
+    setEditZh('');
+    await autoSubmitAndToast('注意事項已更新');
+    load();
   };
 
-  const handleDelete = async (tpl: WarningTemplate) => {
-    const label = tpl.text_en || tpl.text_zh || tpl.text;
+  const handleDelete = async (tpl: MergedWarningTemplate) => {
+    const label = tpl.text_en || tpl.text_zh || '(empty)';
     if (!confirm(`確定刪除「${label}」？`)) return;
+
+    if (tpl._isLocalOnly && tpl._localId) {
+      removePendingChange(tpl._localId);
+      showToast('info', '已取消新增');
+    } else {
+      addPendingChange('warning_delete', { id: tpl.id });
+      await autoSubmitAndToast('注意事項已刪除');
+    }
+    load();
+  };
+
+  /* ─── Auto-submit helper ──────────────────────────────────── */
+
+  const autoSubmitAndToast = async (actionLabel: string) => {
+    const drafts = getDraftChanges().filter(
+      (d) => d.proposalType.startsWith('warning_'),
+    );
+    if (drafts.length === 0) return;
+
+    const auth = await checkOyxAuth();
+    if (!auth.authenticated) {
+      showToast('error', `${actionLabel}，但需要先登入 oyx.app (oyx.app/login) 完成提交`);
+      return;
+    }
+
     try {
-      await deleteWarningTemplate(tpl.id!);
-      showToast('success', '注意事項已刪除');
+      const proposals = drafts.map((d) => ({
+        proposalType: d.proposalType,
+        payload: d.payload,
+      }));
+
+      const result = await submitProposals(proposals);
+
+      const successLocalIds: string[] = [];
+      const successProposalIds: number[] = [];
+
+      for (const r of result.results) {
+        if (r.proposalId !== undefined) {
+          successLocalIds.push(drafts[r.localIndex].localId);
+          successProposalIds.push(r.proposalId);
+        }
+      }
+
+      if (successLocalIds.length > 0) {
+        markAsSubmitted(successLocalIds, successProposalIds);
+      }
+
+      const failCount = result.results.length - successLocalIds.length;
+      if (failCount > 0) {
+        showToast('error', `${actionLabel}，但 ${failCount} 項未能提交`);
+      } else {
+        showToast('success', `${actionLabel}並提交審批`);
+      }
+
       load();
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : '刪除失敗');
+    } catch {
+      showToast('error', `${actionLabel}，但自動提交失敗（修改已暫存於本地）`);
     }
   };
 
-  const startEdit = (tpl: WarningTemplate) => {
-    setEditingId(tpl.id!);
+  const startEdit = (tpl: MergedWarningTemplate) => {
+    setEditingId(tpl._localId ?? tpl.id!);
     setEditEn(tpl.text_en || '');
     setEditZh(tpl.text_zh || '');
   };
@@ -104,6 +167,23 @@ export default function WarningTemplatesPage() {
     setEditingId(null);
     setEditEn('');
     setEditZh('');
+  };
+
+  const getStatusBadge = (tpl: MergedWarningTemplate) => {
+    if (tpl._isLocalOnly) {
+      switch (tpl._pendingStatus) {
+        case 'draft':
+          return <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">待提交</span>;
+        case 'submitted':
+          return <span className="ml-2 text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">審批中</span>;
+        default:
+          return null;
+      }
+    }
+    if (tpl._pendingStatus === 'draft') {
+      return <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">已修改</span>;
+    }
+    return null;
   };
 
   return (
@@ -116,7 +196,7 @@ export default function WarningTemplatesPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">注意事項模板</h2>
-            <p className="text-sm text-slate-400 mt-0.5">管理中英文雙語注意事項，配發標籤時可直接選用。</p>
+            <p className="text-sm text-slate-400 mt-0.5">管理中英文雙語注意事項 — 所有編輯先存於本地，經審批後同步至雲端。</p>
           </div>
         </div>
       </div>
@@ -217,17 +297,19 @@ export default function WarningTemplatesPage() {
           <ul className="divide-y divide-slate-100">
             {templates.map((tpl) => (
               <li
-                key={tpl.id}
-                className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors group"
+                key={tpl._localId || tpl.id}
+                className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors group ${
+                  tpl._pendingStatus === 'draft' ? 'bg-amber-50/40' : ''
+                }`}
               >
-                {editingId === tpl.id ? (
+                {editingId === (tpl._localId || tpl.id) ? (
                   <div className="flex-1 flex flex-col md:flex-row gap-3">
                     <input
                       type="text"
                       value={editEn}
                       onChange={(e) => setEditEn(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); handleUpdate(tpl.id!); }
+                        if (e.key === 'Enter') { e.preventDefault(); handleUpdate(tpl._localId || tpl.id!); }
                         if (e.key === 'Escape') cancelEdit();
                       }}
                       placeholder="English"
@@ -239,7 +321,7 @@ export default function WarningTemplatesPage() {
                       value={editZh}
                       onChange={(e) => setEditZh(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); handleUpdate(tpl.id!); }
+                        if (e.key === 'Enter') { e.preventDefault(); handleUpdate(tpl._localId || tpl.id!); }
                         if (e.key === 'Escape') cancelEdit();
                       }}
                       placeholder="中文"
@@ -247,7 +329,7 @@ export default function WarningTemplatesPage() {
                     />
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
-                        onClick={() => handleUpdate(tpl.id!)}
+                        onClick={() => handleUpdate(tpl._localId || tpl.id!)}
                         disabled={!editEn.trim() && !editZh.trim()}
                         className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
                         title="儲存"
@@ -268,6 +350,7 @@ export default function WarningTemplatesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-slate-800 truncate">
                         {tpl.text_en || <span className="italic text-slate-300">(no English)</span>}
+                        {getStatusBadge(tpl)}
                       </div>
                       <div className="text-xs text-slate-500 truncate">
                         {tpl.text_zh || <span className="italic text-slate-300">(無中文)</span>}
@@ -303,13 +386,17 @@ export default function WarningTemplatesPage() {
           className={`fixed bottom-6 right-6 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg shadow-slate-200/50 text-sm font-medium animate-fade-in-up z-50 ${
             toast.type === 'success'
               ? 'bg-emerald-600 text-white'
-              : 'bg-red-500 text-white'
+              : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-blue-600 text-white'
           }`}
         >
           {toast.type === 'success' ? (
             <HiOutlineCheckCircle className="w-4 h-4" />
-          ) : (
+          ) : toast.type === 'error' ? (
             <HiOutlineXMark className="w-4 h-4" />
+          ) : (
+            <HiOutlineExclamationTriangle className="w-4 h-4" />
           )}
           {toast.message}
         </div>

@@ -16,6 +16,7 @@ import {
 import { loadProfile } from '../lib/storage';
 import { fetchDrugs, fetchWarningTemplates } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { mergeDrugs } from '../lib/localPending';
 import { downloadLabelPDF, previewLabelPDF } from '../lib/pdfGenerator';
 import PrecautionEditor from '../components/PrecautionEditor';
 import { formatIngredientsDisplay } from '../components/IngredientEditor';
@@ -86,7 +87,10 @@ export default function DispenseLabelsPage() {
 
   useEffect(() => {
     if (!supabaseOk) return;
-    fetchDrugs().then(setDrugs).catch(() => {});
+    fetchDrugs().then((baseData) => {
+      const merged = mergeDrugs(baseData);
+      setDrugs(merged);
+    }).catch(() => {});
     fetchWarningTemplates()
       .then((data) => setTemplates(data.map((t) => `${t.text_en}||${t.text_zh}`)))
       .catch(() => {});

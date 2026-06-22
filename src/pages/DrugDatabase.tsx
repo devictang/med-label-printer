@@ -9,102 +9,102 @@ import {
   HiOutlineXMark,
   HiOutlineCircleStack,
   HiOutlineTableCells,
+  HiOutlineEye,
+  HiOutlineShieldCheck,
 } from 'react-icons/hi2';
-import { fetchDrugs, createDrug, updateDrug, deleteDrug } from '../lib/supabase';
+import { fetchDrugs } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { formatIngredientsDisplay } from '../components/IngredientEditor';
 import type { Drug } from '../types';
-import { saveDrugUnit, loadDrugUnit } from '../lib/storage';
 import DrugFormModal from '../components/DrugForm';
+import {
+  addPendingChange,
+  removePendingChange,
+  mergeDrugs,
+  getDraftChanges,
+  countSubmittedChanges,
+  markAsSubmitted,
+  type MergedDrug,
+} from '../lib/localPending';
+import { submitProposals, checkOyxAuth } from '../lib/proposals';
 
 export default function DrugDatabasePage() {
-  const [drugs, setDrugs] = useState<Drug[]>([]);
+  const [allDrugs, setAllDrugs] = useState<MergedDrug[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingDrug, setEditingDrug] = useState<Drug | null>(null);
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [editingDrug, setEditingDrug] = useState<Drug | MergedDrug | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  const supabaseOk = isSupabaseConfigured();
+
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const loadDrugs = useCallback(async (q?: string) => {
-    if (!isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
+  const loadMerged = useCallback(async (q?: string) => {
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
-      setError('');
-      const data = await fetchDrugs(q || undefined);
-      // Merge localStorage unit fallback into loaded drugs
-      const merged = data.map(d => ({
-        ...d,
-        unit: d.unit || loadDrugUnit(d) || '',
-      }));
-      setDrugs(merged);
+      let base: Drug[] = [];
+      if (supabaseOk) {
+        base = await fetchDrugs(q || undefined);
+      }
+      const merged = mergeDrugs(base);
+      setAllDrugs(merged);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load drugs');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [supabaseOk]);
 
-  useEffect(() => { loadDrugs(); }, [loadDrugs]);
+  useEffect(() => {
+    loadMerged();
+  }, [loadMerged]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (search) loadDrugs(search);
-      else loadDrugs();
+      loadMerged(search);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, loadDrugs]);
+  }, [search, loadMerged]);
+
+  const submittedCount = countSubmittedChanges();
+
+  /* ─── CRUD handlers — localStorage-first + auto-submit ──── */
 
   const handleCreate = async (data: Omit<Drug, 'id' | 'created_at'>) => {
-    try {
-      const { unit, ...dbData } = data;
-      const created = await createDrug(dbData);
-      if (unit && created?.id) saveDrugUnit(created.id, created.brand_name, unit);
-      showToast('success', '藥物已新增');
-      setShowForm(false);
-      loadDrugs(search);
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : '新增失敗');
-    }
+    addPendingChange('drug_create', data as unknown as Record<string, unknown>);
+    setShowForm(false);
+    await autoSubmitAndToast('藥物已新增');
+    loadMerged(search);
   };
 
   const handleUpdate = async (id: number, data: Partial<Omit<Drug, 'id' | 'created_at'>>) => {
-    try {
-      const { unit, ...dbData } = data;
-      await updateDrug(id, dbData);
-      if (unit) {
-        // Load current drug to get brand_name for localStorage key
-        const current = drugs.find(d => d.id === id);
-        if (current) saveDrugUnit(id, current.brand_name, unit);
-      }
-      showToast('success', '藥物已更新');
-      setEditingDrug(null);
-      setShowForm(false);
-      loadDrugs(search);
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : '更新失敗');
-    }
+    addPendingChange('drug_update', { id, ...data } as unknown as Record<string, unknown>);
+    setEditingDrug(null);
+    setShowForm(false);
+    await autoSubmitAndToast('藥物已更新');
+    loadMerged(search);
   };
 
-  const handleDelete = async (drug: Drug) => {
+  const handleDelete = async (drug: MergedDrug) => {
     if (!confirm(`確定刪除「${drug.brand_name}」？`)) return;
-    try {
-      await deleteDrug(drug.id!);
-      showToast('success', '藥物已刪除');
-      loadDrugs(search);
-    } catch (err) {
-      showToast('error', err instanceof Error ? err.message : '刪除失敗');
+    if (drug._isLocalOnly && drug._localId) {
+      // Local-only drug: just remove the pending change entirely
+      removePendingChange(drug._localId);
+      showToast('info', '已取消新增');
+    } else {
+      addPendingChange('drug_delete', { id: drug.id } as Record<string, unknown>);
+      await autoSubmitAndToast('藥物已刪除');
     }
+    loadMerged(search);
   };
 
-  const openEdit = (drug: Drug) => {
+  const openEdit = (drug: MergedDrug) => {
     setEditingDrug(drug);
     setShowForm(true);
   };
@@ -114,7 +114,78 @@ export default function DrugDatabasePage() {
     setShowForm(true);
   };
 
-  const supabaseOk = isSupabaseConfigured();
+  /* ─── Auto-submit helper ──────────────────────────────────── */
+
+  const autoSubmitAndToast = async (actionLabel: string) => {
+    const drafts = getDraftChanges();
+    if (drafts.length === 0) return;
+
+    const auth = await checkOyxAuth();
+    if (!auth.authenticated) {
+      showToast('error', `${actionLabel}，但需要先登入 oyx.app (oyx.app/login) 完成提交`);
+      return;
+    }
+
+    try {
+      const proposals = drafts.map((d) => ({
+        proposalType: d.proposalType,
+        payload: d.payload,
+      }));
+
+      const result = await submitProposals(proposals);
+
+      const successLocalIds: string[] = [];
+      const successProposalIds: number[] = [];
+
+      for (const r of result.results) {
+        if (r.proposalId !== undefined) {
+          successLocalIds.push(drafts[r.localIndex].localId);
+          successProposalIds.push(r.proposalId);
+        }
+      }
+
+      if (successLocalIds.length > 0) {
+        markAsSubmitted(successLocalIds, successProposalIds);
+      }
+
+      const failCount = result.results.length - successLocalIds.length;
+      if (failCount > 0) {
+        showToast('error', `${actionLabel}，但 ${failCount} 項未能提交`);
+      } else {
+        showToast('success', `${actionLabel}並提交審批`);
+      }
+
+      loadMerged(search);
+    } catch {
+      showToast('error', `${actionLabel}，但自動提交失敗（修改已暫存於本地）`);
+    }
+  };
+
+  /* ─── Helpers ─────────────────────────────────────────────── */
+
+  const getStatusBadge = (drug: MergedDrug) => {
+    if (drug._isLocalOnly) {
+      switch (drug._pendingStatus) {
+        case 'draft':
+          return <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">待提交</span>;
+        case 'submitted':
+          return <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">審批中</span>;
+        case 'approved':
+          return <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">已核准</span>;
+        case 'rejected':
+          return <span className="text-[10px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200">已拒絕</span>;
+        default:
+          return null;
+      }
+    }
+    if (drug._pendingStatus === 'draft') {
+      return <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">已修改</span>;
+    }
+    if (drug._pendingStatus === 'submitted') {
+      return <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">審批中</span>;
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6 stagger-children">
@@ -126,7 +197,7 @@ export default function DrugDatabasePage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800">藥物數據庫</h2>
-            <p className="text-sm text-slate-400 mt-0.5">管理藥劑製品資料，包括名稱、成分、劑量及預設用法。</p>
+            <p className="text-sm text-slate-400 mt-0.5">管理藥劑製品資料 — 所有編輯先存於本地，經審批後同步至雲端。</p>
           </div>
         </div>
         <button
@@ -156,20 +227,37 @@ export default function DrugDatabasePage() {
         </div>
       )}
 
+      {/* Submitted items banner */}
+      {submittedCount > 0 && (
+        <div className="rounded-xl p-4 flex items-start gap-3 animate-fade-in bg-blue-50/80 border border-blue-200/70">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <HiOutlineEye className="w-4 h-4 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-blue-800">
+              <strong>{submittedCount}</strong> 項變更正在審批
+            </p>
+            <p className="text-xs text-blue-600/80 mt-0.5">
+              到 Control Panel (oyx.app/apps/control-panel) 查看審批進度。
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats bar */}
       {supabaseOk && !loading && !error && (
         <div className="card-elevated px-5 py-3 flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <HiOutlineCircleStack className="w-4 h-4 text-indigo-400" />
-            共 <strong className="text-slate-800">{drugs.length}</strong> 種藥物
+            共 <strong className="text-slate-800">{allDrugs.length}</strong> 種藥物
           </div>
-          {drugs.length > 0 && (
+          {allDrugs.length > 0 && (
             <>
               <div className="w-px h-4 bg-slate-200" />
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <HiOutlineTableCells className="w-4 h-4 text-indigo-400" />
                 <span className="text-slate-400">
-                  {drugs.filter((d) => d.default_usage).length} 種有預設用法
+                  {allDrugs.filter((d) => d.default_usage).length} 種有預設用法
                 </span>
               </div>
             </>
@@ -227,7 +315,7 @@ export default function DrugDatabasePage() {
       )}
 
       {/* Drug table */}
-      {!loading && supabaseOk && drugs.length === 0 && (
+      {!loading && supabaseOk && allDrugs.length === 0 && (
         <div className="card-elevated px-12 py-16 text-center animate-fade-in-up">
           <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
             <HiOutlinePlusCircle className="w-8 h-8 text-indigo-300" />
@@ -244,7 +332,7 @@ export default function DrugDatabasePage() {
         </div>
       )}
 
-      {!loading && supabaseOk && drugs.length > 0 && (
+      {!loading && supabaseOk && allDrugs.length > 0 && (
         <div className="card-elevated overflow-hidden animate-fade-in-up">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -254,23 +342,28 @@ export default function DrugDatabasePage() {
                   <th className="px-4 py-3.5">藥物成分</th>
                   <th className="px-4 py-3.5">HK 編號</th>
                   <th className="px-4 py-3.5">預設用法</th>
+                  <th className="px-4 py-3.5">狀態</th>
                   <th className="px-4 py-3.5 pr-5 w-20 text-right">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {drugs.map((drug) => (
+                {allDrugs.map((drug) => (
                   <tr
-                    key={drug.id}
-                    className="hover:bg-indigo-50/30 transition-colors"
+                    key={drug._localId || drug.id}
+                    className={`hover:bg-indigo-50/30 transition-colors ${
+                      drug._pendingStatus === 'draft' ? 'bg-amber-50/40' : ''
+                    } ${drug._pendingStatus === 'submitted' ? 'bg-blue-50/40' : ''}`}
                   >
                     <td className="px-4 py-3.5 pl-5">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-[10px] font-bold text-indigo-600">{drug.brand_name.charAt(0)}</span>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          drug._isLocalOnly ? 'bg-amber-100' : 'bg-indigo-100'
+                        }`}>
+                          <span className={`text-[10px] font-bold ${
+                            drug._isLocalOnly ? 'text-amber-600' : 'text-indigo-600'
+                          }`}>{drug.brand_name.charAt(0)}</span>
                         </div>
-                        <div>
-                          <p className="font-semibold text-slate-800">{drug.brand_name}</p>
-                        </div>
+                        <p className="font-semibold text-slate-800">{drug.brand_name}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-slate-600 text-xs">
@@ -281,8 +374,11 @@ export default function DrugDatabasePage() {
                         {drug.hk_number}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-400 text-xs max-w-[220px] truncate">
+                    <td className="px-4 py-3.5 text-slate-400 text-xs max-w-[200px] truncate">
                       {drug.default_usage || <span className="italic text-slate-300">無預設</span>}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {getStatusBadge(drug)}
                     </td>
                     <td className="px-4 py-3.5 pr-5">
                       <div className="flex items-center justify-end gap-0.5">
@@ -332,13 +428,17 @@ export default function DrugDatabasePage() {
           className={`fixed bottom-6 right-6 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg shadow-slate-200/50 text-sm font-medium animate-fade-in-up z-50 ${
             toast.type === 'success'
               ? 'bg-emerald-600 text-white'
-              : 'bg-red-500 text-white'
+              : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-blue-600 text-white'
           }`}
         >
           {toast.type === 'success' ? (
             <HiOutlineCheckCircle className="w-4 h-4" />
-          ) : (
+          ) : toast.type === 'error' ? (
             <HiOutlineXMark className="w-4 h-4" />
+          ) : (
+            <HiOutlineShieldCheck className="w-4 h-4" />
           )}
           {toast.message}
         </div>
