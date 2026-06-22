@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { formatIngredientsDisplay } from '../components/IngredientEditor';
 import { ensureCJKFont, registerCJKFont, setDocFont } from './pdfFont';
+import { loadFontScale } from './storage';
 import type { LabelItem, LabelGridConfig } from '../types';
 
 const A4_W = 210;  // mm
@@ -50,6 +51,7 @@ function getPositions(config: LabelGridConfig, count: number) {
  * FULL BLACK & WHITE — no color ink used. Hierarchy via weight & size.
  */
 function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, item: LabelItem) {
+  const fs = loadFontScale();
   const pad = 1.5;
   const x = cx + pad;
   const y = cy + pad;
@@ -64,84 +66,84 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
   // ── Bottom bar (fixed from bottom) ─────────────────────────
   const addrY = y + h - 0.5;
   setDocFont(doc, 'normal');
-  doc.setFontSize(5);
+  doc.setFontSize(5 * fs);
   doc.setTextColor(100, 100, 100);
   doc.text(item.pharmacy.address.slice(0, 58), x, addrY);
 
-  const infoY = addrY - 4;
+  const infoY = addrY - 4 * fs;
   setDocFont(doc, 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(8 * fs);
   doc.setTextColor(0, 0, 0);
   doc.text(item.patientName.slice(0, 23), x, infoY);
   setDocFont(doc, 'normal');
-  doc.setFontSize(6);
+  doc.setFontSize(6 * fs);
   doc.setTextColor(80, 80, 80);
   doc.text(item.date, x + w, infoY, { align: 'right' });
 
   // ── Top bar (fixed at top) ─────────────────────────────────
-  const topY = y + 2.5;
+  const topY = y + 2.5 * fs;
   setDocFont(doc, 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(7 * fs);
   doc.setTextColor(0, 0, 0);
   doc.text(item.pharmacy.name.slice(0, 26), x, topY);
   if (item.quantity) {
     setDocFont(doc, 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(8 * fs);
     doc.setTextColor(0, 0, 0);
     doc.text(`${item.quantity} ${item.unit}`, x + w, topY, { align: 'right' });
   }
 
   // ── Mid section — wrap via splitTextToSize, no vertical cap ─
-  let curY = y + 8;
+  let curY = y + 8 * fs;
 
   // Brand name — 10pt bold, wrap, max 2 lines
   setDocFont(doc, 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(10 * fs);
   doc.setTextColor(0, 0, 0);
   const brandLines = doc.splitTextToSize(item.drug.brand_name, w);
   brandLines.slice(0, 2).forEach((line: string) => {
     doc.text(line, x, curY);
-    curY += 4;
+    curY += 4 * fs;
   });
 
   // Ingredient — 6.5pt, 1 line
   setDocFont(doc, 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(6.5 * fs);
   doc.setTextColor(0, 0, 0);
   const ing = item.drug.ingredient ? formatIngredientsDisplay(item.drug.ingredient) : '';
   if (ing) {
     const ingLines = doc.splitTextToSize(ing, w);
-    doc.text(ingLines[0] || '', x, curY + 0.5);
-    curY += 4;
+    doc.text(ingLines[0] || '', x, curY + 0.5 * fs);
+    curY += 4 * fs;
   }
 
   // HK# — 6pt
-  doc.setFontSize(6);
+  doc.setFontSize(6 * fs);
   doc.setTextColor(80, 80, 80);
   doc.text(item.drug.hk_number, x, curY);
-  curY += 3.5;
+  curY += 3.5 * fs;
 
   // Usage — 7pt, wrap
-  curY += 1;
+  curY += 1 * fs;
   setDocFont(doc, 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(7 * fs);
   doc.setTextColor(0, 0, 0);
   const usageText = item.customUsage || item.drug.default_usage || '';
   if (usageText) {
     const usageLines = doc.splitTextToSize(usageText, w);
     usageLines.slice(0, 3).forEach((line: string) => {
       doc.text(line, x, curY);
-      curY += 3.5;
+      curY += 3.5 * fs;
     });
   }
 
   // Precautions — bilingual, 6.5pt bold — show all, no line cap
   const cautionText = item.customPrecautions || item.drug.default_precautions || '';
   if (cautionText) {
-    curY += 0.5;
+    curY += 0.5 * fs;
     doc.setTextColor(0, 0, 0);
     setDocFont(doc, 'bold');
-    doc.setFontSize(6.5);
+    doc.setFontSize(6.5 * fs);
 
     const precautionLines = cautionText.split('\n').map((l) => l.trim()).filter(Boolean);
     for (const line of precautionLines) {
@@ -156,7 +158,7 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
         const lines = doc.splitTextToSize(`⚠ ${en}`, w);
         for (const s of lines) {
           doc.text(s, x, curY);
-          curY += 3.3;
+          curY += 3.3 * fs;
         }
       } else {
         // Bilingual: try one line first
@@ -164,13 +166,13 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
         const combinedLines = doc.splitTextToSize(combined, w);
         if (combinedLines.length === 1) {
           doc.text(combined, x, curY);
-          curY += 3.3;
+          curY += 3.3 * fs;
         } else {
           // EN + ZH on separate lines
           const enLines = doc.splitTextToSize(`⚠ ${en}`, w);
-          enLines.forEach((s: string) => { doc.text(s, x, curY); curY += 3.3; });
+          enLines.forEach((s: string) => { doc.text(s, x, curY); curY += 3.3 * fs; });
           const zhLines = doc.splitTextToSize(zh, w);
-          zhLines.forEach((s: string) => { doc.text(s, x, curY); curY += 3.3; });
+          zhLines.forEach((s: string) => { doc.text(s, x, curY); curY += 3.3 * fs; });
         }
       }
     }
@@ -221,7 +223,7 @@ export async function generateLabelPDF(
     }
 
     // Page footer
-    doc.setFontSize(4);
+    doc.setFontSize(4 * loadFontScale());
     doc.setTextColor(150, 150, 150);
     doc.text(`藥物標籤列印系統 - 第 ${pg + 1} 頁`, A4_W - 5, A4_H - 3, { align: 'right' });
   }

@@ -4,13 +4,15 @@ import {
   HiOutlineCog6Tooth,
   HiOutlineCheckCircle,
   HiOutlineScale,
+  HiOutlineAdjustmentsHorizontal,
 } from 'react-icons/hi2';
-import { saveGridConfig } from '../lib/storage';
+import { saveGridConfig, saveFontScale, loadFontScale } from '../lib/storage';
 import type { LabelGridConfig } from '../types';
 import { DEFAULT_GRID, PRESET_GRIDS } from '../types';
 
 export default function LabelSettingsPage() {
   const [config, setConfig] = useState<LabelGridConfig>(DEFAULT_GRID);
+  const [fontScale, setFontScale] = useState(1);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -21,6 +23,7 @@ export default function LabelSettingsPage() {
         setConfig(parsed);
       } catch {}
     }
+    setFontScale(loadFontScale());
   }, []);
 
   const update = (field: keyof LabelGridConfig, value: number) => {
@@ -151,6 +154,44 @@ export default function LabelSettingsPage() {
               '儲存設定'
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Font scale */}
+      <div className="card-elevated overflow-hidden animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center">
+            <HiOutlineAdjustmentsHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-700">字體大小</h3>
+        </div>
+        <div className="p-5">
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-slate-400 font-medium w-6 text-center">A</span>
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.05"
+              value={fontScale}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                setFontScale(v);
+                saveFontScale(v);
+                setSaved(true);
+                setTimeout(() => setSaved(false), 1500);
+              }}
+              className="flex-1 accent-indigo-500 h-1.5 rounded-full appearance-none cursor-pointer bg-slate-200"
+              style={{ accentColor: '#6366f1' }}
+            />
+            <span className="text-xs text-slate-400 font-medium w-6 text-center">A</span>
+            <span className="text-sm font-semibold text-indigo-600 w-12 text-right tabular-nums">
+              {fontScale.toFixed(2)}×
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-2 ml-6">
+            所有文字按比例放大/縮小，各部分相對大小保持不變。
+          </p>
         </div>
       </div>
 

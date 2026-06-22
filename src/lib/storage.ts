@@ -2,6 +2,7 @@ import type { PharmacyProfile, LabelGridConfig, Drug } from '../types';
 
 const PROFILE_KEY = 'med-label-printer:profile';
 const GRID_KEY = 'med-label-printer:grid-config';
+const FONT_SCALE_KEY = 'med-label-printer:font-scale';
 const DRUG_UNITS_KEY = 'med-label-printer:drug-units';
 
 /** Save pharmacy profile to localStorage */
@@ -63,5 +64,20 @@ export function loadDrugUnit(drug: Drug): string | undefined {
     return undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** Save font scale factor to localStorage */
+export function saveFontScale(scale: number): void {
+  localStorage.setItem(FONT_SCALE_KEY, JSON.stringify(scale));
+}
+
+/** Load font scale factor from localStorage (defaults to 1.0) */
+export function loadFontScale(): number {
+  try {
+    const raw = localStorage.getItem(FONT_SCALE_KEY);
+    return raw ? JSON.parse(raw) : 1;
+  } catch {
+    return 1;
   }
 }
