@@ -9,7 +9,6 @@ import {
   HiOutlineXMark,
   HiOutlineCircleStack,
   HiOutlineTableCells,
-  HiOutlineEye,
   HiOutlineShieldCheck,
 } from 'react-icons/hi2';
 import { fetchDrugs } from '../lib/supabase';
@@ -22,7 +21,6 @@ import {
   removePendingChange,
   mergeDrugs,
   getDraftChanges,
-  countSubmittedChanges,
   markAsSubmitted,
   type MergedDrug,
 } from '../lib/localPending';
@@ -71,8 +69,6 @@ export default function DrugDatabasePage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search, loadMerged]);
-
-  const submittedCount = countSubmittedChanges();
 
   /* ─── CRUD handlers — localStorage-first + auto-submit ──── */
 
@@ -161,32 +157,6 @@ export default function DrugDatabasePage() {
     }
   };
 
-  /* ─── Helpers ─────────────────────────────────────────────── */
-
-  const getStatusBadge = (drug: MergedDrug) => {
-    if (drug._isLocalOnly) {
-      switch (drug._pendingStatus) {
-        case 'draft':
-          return <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">待提交</span>;
-        case 'submitted':
-          return <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">審批中</span>;
-        case 'approved':
-          return <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">已核准</span>;
-        case 'rejected':
-          return <span className="text-[10px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200">已拒絕</span>;
-        default:
-          return null;
-      }
-    }
-    if (drug._pendingStatus === 'draft') {
-      return <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">已修改</span>;
-    }
-    if (drug._pendingStatus === 'submitted') {
-      return <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">審批中</span>;
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-6 stagger-children">
       {/* Header */}
@@ -222,23 +192,6 @@ export default function DrugDatabasePage() {
               請在專案根目錄建立 <code className="bg-amber-100 px-1 rounded">.env</code> 檔案，並設定{' '}
               <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_URL</code> 及{' '}
               <code className="bg-amber-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>。
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Submitted items banner */}
-      {submittedCount > 0 && (
-        <div className="rounded-xl p-4 flex items-start gap-3 animate-fade-in bg-blue-50/80 border border-blue-200/70">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <HiOutlineEye className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-blue-800">
-              <strong>{submittedCount}</strong> 項變更正在審批
-            </p>
-            <p className="text-xs text-blue-600/80 mt-0.5">
-              到 Control Panel (oyx.app/apps/control-panel) 查看審批進度。
             </p>
           </div>
         </div>
@@ -342,7 +295,6 @@ export default function DrugDatabasePage() {
                   <th className="px-4 py-3.5">藥物成分</th>
                   <th className="px-4 py-3.5">HK 編號</th>
                   <th className="px-4 py-3.5">預設用法</th>
-                  <th className="px-4 py-3.5">狀態</th>
                   <th className="px-4 py-3.5 pr-5 w-20 text-right">操作</th>
                 </tr>
               </thead>
@@ -350,18 +302,12 @@ export default function DrugDatabasePage() {
                 {allDrugs.map((drug) => (
                   <tr
                     key={drug._localId || drug.id}
-                    className={`hover:bg-indigo-50/30 transition-colors ${
-                      drug._pendingStatus === 'draft' ? 'bg-amber-50/40' : ''
-                    } ${drug._pendingStatus === 'submitted' ? 'bg-blue-50/40' : ''}`}
+                    className="hover:bg-indigo-50/30 transition-colors"
                   >
                     <td className="px-4 py-3.5 pl-5">
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          drug._isLocalOnly ? 'bg-amber-100' : 'bg-indigo-100'
-                        }`}>
-                          <span className={`text-[10px] font-bold ${
-                            drug._isLocalOnly ? 'text-amber-600' : 'text-indigo-600'
-                          }`}>{drug.brand_name.charAt(0)}</span>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-indigo-100">
+                          <span className="text-[10px] font-bold text-indigo-600">{drug.brand_name.charAt(0)}</span>
                         </div>
                         <p className="font-semibold text-slate-800">{drug.brand_name}</p>
                       </div>
@@ -376,9 +322,6 @@ export default function DrugDatabasePage() {
                     </td>
                     <td className="px-4 py-3.5 text-slate-400 text-xs max-w-[200px] truncate">
                       {drug.default_usage || <span className="italic text-slate-300">無預設</span>}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {getStatusBadge(drug)}
                     </td>
                     <td className="px-4 py-3.5 pr-5">
                       <div className="flex items-center justify-end gap-0.5">

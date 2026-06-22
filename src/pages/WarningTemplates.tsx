@@ -169,23 +169,6 @@ export default function WarningTemplatesPage() {
     setEditZh('');
   };
 
-  const getStatusBadge = (tpl: MergedWarningTemplate) => {
-    if (tpl._isLocalOnly) {
-      switch (tpl._pendingStatus) {
-        case 'draft':
-          return <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">待提交</span>;
-        case 'submitted':
-          return <span className="ml-2 text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-200">審批中</span>;
-        default:
-          return null;
-      }
-    }
-    if (tpl._pendingStatus === 'draft') {
-      return <span className="ml-2 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">已修改</span>;
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-6 stagger-children">
       {/* Header */}
@@ -298,9 +281,7 @@ export default function WarningTemplatesPage() {
             {templates.map((tpl) => (
               <li
                 key={tpl._localId || tpl.id}
-                className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors group ${
-                  tpl._pendingStatus === 'draft' ? 'bg-amber-50/40' : ''
-                }`}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/60 transition-colors group"
               >
                 {editingId === (tpl._localId || tpl.id) ? (
                   <div className="flex-1 flex flex-col md:flex-row gap-3">
@@ -350,7 +331,6 @@ export default function WarningTemplatesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-slate-800 truncate">
                         {tpl.text_en || <span className="italic text-slate-300">(no English)</span>}
-                        {getStatusBadge(tpl)}
                       </div>
                       <div className="text-xs text-slate-500 truncate">
                         {tpl.text_zh || <span className="italic text-slate-300">(無中文)</span>}
