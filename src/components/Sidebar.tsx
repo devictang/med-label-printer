@@ -5,7 +5,9 @@ import {
   HiOutlineUser,
   HiOutlineCog6Tooth,
   HiOutlineShieldExclamation,
+  HiOutlineArrowPath,
 } from 'react-icons/hi2';
+import { clearNonApprovedChanges } from '../lib/localPending';
 
 const navItems = [
   { to: '/', label: '配發標籤', icon: HiOutlineDocumentText },
@@ -16,6 +18,11 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const handleSync = () => {
+    clearNonApprovedChanges();
+    window.location.reload();
+  };
+
   return (
     <aside className="fixed top-0 left-0 z-40 w-60 h-screen sidebar-glass text-white flex flex-col no-print border-r border-white/[0.04]">
       {/* Logo */}
@@ -70,7 +77,15 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-white/[0.05]">
+      <div className="px-5 py-4 border-t border-white/[0.05] space-y-2">
+        <button
+          onClick={handleSync}
+          className="flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-[11px] font-medium text-slate-500 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all"
+          title="清除本地暫存，同步數據庫"
+        >
+          <HiOutlineArrowPath className="w-3.5 h-3.5" />
+          <span>同步數據庫</span>
+        </button>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse" />
           <p className="text-[10px] text-slate-600 font-medium">v1.0.0</p>

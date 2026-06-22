@@ -302,6 +302,12 @@ export function updatePendingChangePayload(
   }
 }
 
+/** Clear all pending changes that are not yet approved (discards unapproved drafts/submissions) */
+export function clearNonApprovedChanges(): void {
+  const changes = loadAll().filter((c) => c.status === 'approved');
+  saveAll(changes);
+}
+
 /** Count of draft (unsubmitted) changes */
 export function countDraftChanges(): number {
   return loadAll().filter((c) => c.status === 'draft').length;
