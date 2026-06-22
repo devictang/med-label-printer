@@ -22,6 +22,7 @@ import {
   mergeDrugs,
   getDraftChanges,
   markAsSubmitted,
+  syncProposalStatus,
   type MergedDrug,
 } from '../lib/localPending';
 import { submitProposals, checkOyxAuth } from '../lib/proposals';
@@ -69,6 +70,14 @@ export default function DrugDatabasePage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search, loadMerged]);
+
+  // Poll proposal status so admin edits are reflected once approved
+  useEffect(() => {
+    const interval = setInterval(() => {
+      syncProposalStatus().then(() => loadMerged(search)).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [loadMerged, search]);
 
   /* ─── CRUD handlers — localStorage-first + auto-submit ──── */
 

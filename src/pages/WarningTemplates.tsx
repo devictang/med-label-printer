@@ -19,6 +19,7 @@ import {
   mergeWarningTemplates,
   getDraftChanges,
   markAsSubmitted,
+  syncProposalStatus,
   updatePendingChangePayload,
   type MergedWarningTemplate,
 } from '../lib/localPending';
@@ -61,6 +62,14 @@ export default function WarningTemplatesPage() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Poll proposal status so admin edits are reflected once approved
+  useEffect(() => {
+    const interval = setInterval(() => {
+      syncProposalStatus().then(() => load()).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
   }, [load]);
 
   /* ─── Local-first CRUD + auto-submit ─────────────────────── */

@@ -308,6 +308,43 @@ export function clearNonApprovedChanges(): void {
   saveAll(changes);
 }
 
+/**
+ * Poll oyx.app API to sync the status of submitted proposals.
+ * Updates localStorage when a submitted proposal is approved or rejected by admin,
+ * so the merge logic stops applying stale payload data on top of the corrected Supabase records.
+ */
+export async function syncProposalStatus(): Promise<void> {
+  const changes = loadAll();
+  const submitted = changes.filter((c) => c.status === 'submitted' && c.proposalId);
+  if (submitted.length === 0) return;
+
+  const { fetchProposals } = await import('./proposals');
+  const data = await fetchProposals();
+  if (!data.ok || !data.proposals) return;
+
+  const serverMap = new Map(data.proposals.map((p) => [p.id, p]));
+
+  let updated = false;
+  for (const change of submitted) {
+    if (!change.proposalId) continue;
+    const server = serverMap.get(change.proposalId);
+    if (!server) continue;
+
+    if (server.status === 'approved' && change.status !== 'approved') {
+      change.status = 'approved';
+      change.lastCheckedAt = new Date().toISOString();
+      updated = true;
+    } else if (server.status === 'rejected' && change.status !== 'rejected') {
+      change.status = 'rejected';
+      change.rejectReason = server.reject_reason || undefined;
+      change.lastCheckedAt = new Date().toISOString();
+      updated = true;
+    }
+  }
+
+  if (updated) saveAll(changes);
+}
+
 /** Count of draft (unsubmitted) changes */
 export function countDraftChanges(): number {
   return loadAll().filter((c) => c.status === 'draft').length;
