@@ -14,7 +14,7 @@ import {
   HiOutlineDocumentText,
   HiOutlineArrowUturnLeft,
 } from 'react-icons/hi2';
-import { loadProfile, loadGridConfig, saveLabelFormRows, loadLabelFormRows, clearLabelFormRows, saveLabelRecord } from '../lib/storage';
+import { loadProfile, loadGridConfig, saveLabelFormRows, loadLabelFormRows, clearLabelFormRows, saveLabelRecord, loadStartFrom, saveStartFrom } from '../lib/storage';
 import type { Drug, PharmacyProfile, LabelItem, LabelGridConfig } from '../types';
 import { DEFAULT_GRID } from '../types';
 import { downloadLabelPDF, previewLabelPDF } from '../lib/pdfGenerator';
@@ -72,6 +72,7 @@ export default function DispenseLabelsPage() {
   const [showDrugPicker, setShowDrugPicker] = useState<string | null>(null);
   const [gridConfig, setGridConfig] = useState<LabelGridConfig>(DEFAULT_GRID);
   const [generating, setGenerating] = useState(false);
+  const [startFrom, setStartFrom] = useState(1);
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const [templates, setTemplates] = useState<string[]>(FALLBACK_WARNINGS);
   const pickerInputRef = useRef<HTMLInputElement | null>(null);
@@ -82,6 +83,7 @@ export default function DispenseLabelsPage() {
     const p = loadProfile();
     setProfile(p);
     setGridConfig(loadGridConfig());
+    setStartFrom(loadStartFrom());
     // Restore saved form state
     const savedRows = loadLabelFormRows();
     if (savedRows && savedRows.length > 0) {
@@ -181,7 +183,7 @@ export default function DispenseLabelsPage() {
     const items = buildLabelItems();
     if (items.length === 0) return;
     saveLabelRecord(rows);
-    await previewLabelPDF(items, gridConfig);
+    await previewLabelPDF(items, gridConfig, startFrom);
   };
 
   const handleDownload = async () => {
@@ -190,7 +192,7 @@ export default function DispenseLabelsPage() {
     saveLabelRecord(rows);
     setGenerating(true);
     try {
-      await downloadLabelPDF(items, gridConfig);
+      await downloadLabelPDF(items, gridConfig, startFrom);
     } finally {
       setGenerating(false);
     }
@@ -199,7 +201,10 @@ export default function DispenseLabelsPage() {
   const validRows = rows.filter((r) => r.patientName.trim() && r.selectedDrug);
   const totalLabels = validRows.reduce((sum, r) => sum + r.copies, 0);
   const labelsPerPage = gridConfig.cols * gridConfig.rows;
-  const totalPages = Math.ceil(totalLabels / labelsPerPage);
+  const firstPageSlots = Math.max(0, labelsPerPage - (startFrom - 1));
+  const totalPages = firstPageSlots >= totalLabels
+    ? 1
+    : 1 + Math.ceil(Math.max(0, totalLabels - firstPageSlots) / labelsPerPage);
   const hasProfile = !!profile;
 
   const handleReset = () => {
@@ -599,6 +604,33 @@ export default function DispenseLabelsPage() {
             <div className="flex items-center gap-1.5 text-sm text-slate-500">
               <HiOutlineDocumentText className="w-4 h-4" />
               每頁 <strong className="text-slate-800">{labelsPerPage}</strong> 格
+            </div>
+            <div className="w-px h-5 bg-slate-200" />
+            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+              <HiOutlinePrinter className="w-4 h-4" />
+              由第
+              <input
+                type="number"
+                min={1}
+                max={labelsPerPage}
+                value={startFrom}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v) && v >= 1 && v <= labelsPerPage) {
+                    setStartFrom(v);
+                    saveStartFrom(v);
+                  }
+                }}
+                onBlur={() => {
+                  if (startFrom < 1 || startFrom > labelsPerPage) {
+                    const clamped = Math.max(1, Math.min(labelsPerPage, startFrom));
+                    setStartFrom(clamped);
+                    saveStartFrom(clamped);
+                  }
+                }}
+                className="w-12 px-1 py-0.5 bg-white border border-slate-200 rounded-md text-xs text-center text-slate-700 font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-400"
+              />
+              格開始
             </div>
             <div className="w-px h-5 bg-slate-200" />
             <div className="flex items-center gap-1.5 text-sm text-slate-500">

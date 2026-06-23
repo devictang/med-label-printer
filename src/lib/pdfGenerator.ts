@@ -180,59 +180,72 @@ function drawLabel(doc: jsPDF, cx: number, cy: number, cw: number, ch: number, i
 
 // ─── PDF generation ──────────────────────────────────────────────
 
-/** Generate a PDF with labels. Returns the PDF as a Blob. */
+/** Generate a PDF with labels. Returns the PDF as a Blob.
+ * @param startFrom 1-based grid position to start filling labels from (default 1, applies to first page only)
+ */
 export async function generateLabelPDF(
   items: LabelItem[],
   config: LabelGridConfig,
   includeEmptyGrid: boolean = true,
+  startFrom: number = 1,
 ): Promise<Blob> {
   await ensureCJKFont();
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   registerCJKFont(doc);
 
   const itemsPerPage = config.cols * config.rows;
+  let pg = 0;
+  let itemCursor = 0;
 
-  for (let pg = 0; pg < Math.ceil(items.length / itemsPerPage); pg++) {
+  while (itemCursor < items.length) {
     if (pg > 0) doc.addPage();
 
-    const pageItems = items.slice(pg * itemsPerPage, (pg + 1) * itemsPerPage);
-    const allPos = getPositions(config, includeEmptyGrid ? itemsPerPage : pageItems.length);
+    // First page respects startFrom; subsequent pages use full grid
+    const offset = (pg === 0) ? Math.min(startFrom - 1, itemsPerPage - 1) : 0;
+    const slotsOnPage = itemsPerPage - offset;
+    const pageItems = items.slice(itemCursor, itemCursor + slotsOnPage);
+    itemCursor += pageItems.length;
+
+    const allPos = getPositions(config, itemsPerPage);
 
     if (includeEmptyGrid) {
-      // 1. Draw empty grid outlines (light fill + thin border)
-      const gridPos = getPositions(config, itemsPerPage);
-      gridPos.forEach((pos) => {
+      // 1. Draw empty grid outlines (all positions)
+      allPos.forEach((pos) => {
         doc.setFillColor(255, 255, 255);
         doc.setDrawColor(0, 0, 0);
         doc.setLineWidth(0.1);
         doc.rect(pos.x, pos.y, pos.w, pos.h, 'FD');
       });
-      // 2. Draw filled labels on top
+      // 2. Draw filled labels on top, starting from offset
       pageItems.forEach((item, idx) => {
-        if (idx < allPos.length) {
-          drawLabel(doc, allPos[idx].x, allPos[idx].y, allPos[idx].w, allPos[idx].h, item, config);
+        const posIdx = offset + idx;
+        if (posIdx < allPos.length) {
+          drawLabel(doc, allPos[posIdx].x, allPos[posIdx].y, allPos[posIdx].w, allPos[posIdx].h, item, config);
         }
       });
     } else {
-      allPos.forEach((pos, idx) => {
-        if (idx < pageItems.length) {
-          drawLabel(doc, pos.x, pos.y, pos.w, pos.h, pageItems[idx], config);
-        }
-      });
+      // Only draw filled labels from offset
+      const drawEnd = Math.min(offset + pageItems.length, allPos.length);
+      for (let i = offset; i < drawEnd; i++) {
+        const itemIdx = i - offset;
+        drawLabel(doc, allPos[i].x, allPos[i].y, allPos[i].w, allPos[i].h, pageItems[itemIdx], config);
+      }
     }
 
     // Page footer
     doc.setFontSize(4 * loadFontScale());
     doc.setTextColor(150, 150, 150);
     doc.text(`藥物標籤列印系統 - 第 ${pg + 1} 頁`, A4_W - 5, A4_H - 3, { align: 'right' });
+
+    pg++;
   }
 
   return doc.output('blob');
 }
 
 /** Generate and download the PDF */
-export async function downloadLabelPDF(items: LabelItem[], config: LabelGridConfig): Promise<void> {
-  const blob = await generateLabelPDF(items, config);
+export async function downloadLabelPDF(items: LabelItem[], config: LabelGridConfig, startFrom: number = 1): Promise<void> {
+  const blob = await generateLabelPDF(items, config, true, startFrom);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -244,8 +257,8 @@ export async function downloadLabelPDF(items: LabelItem[], config: LabelGridConf
 }
 
 /** Preview the PDF in a new tab */
-export async function previewLabelPDF(items: LabelItem[], config: LabelGridConfig): Promise<void> {
-  const blob = await generateLabelPDF(items, config);
+export async function previewLabelPDF(items: LabelItem[], config: LabelGridConfig, startFrom: number = 1): Promise<void> {
+  const blob = await generateLabelPDF(items, config, true, startFrom);
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
   setTimeout(() => URL.revokeObjectURL(url), 30000);

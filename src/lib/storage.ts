@@ -7,6 +7,7 @@ const FONT_SCALE_KEY = 'med-label-printer:font-scale';
 const LABEL_FORM_KEY = 'med-label-printer:label-form-rows';
 const LABEL_RECORDS_KEY = 'med-label-printer:label-records';
 const DRUG_UNITS_KEY = 'med-label-printer:drug-units';
+const START_FROM_KEY = 'med-label-printer:start-from';
 
 /** Save pharmacy profile to localStorage */
 export function saveProfile(profile: PharmacyProfile): void {
@@ -216,4 +217,21 @@ export function renameRecord(id: string, name: string): void {
 export function deleteRecord(id: string): void {
   const records = loadRecordsRaw().filter((r) => r.id !== id);
   saveRecordsRaw(records);
+}
+
+/* ─── Start-from offset ──────────────────────────────────── */
+
+/** Save the label grid start-from offset (1-based, default 1) */
+export function saveStartFrom(n: number): void {
+  localStorage.setItem(START_FROM_KEY, JSON.stringify(n));
+}
+
+/** Load the start-from offset (1-based, defaults to 1) */
+export function loadStartFrom(): number {
+  try {
+    const raw = localStorage.getItem(START_FROM_KEY);
+    return raw ? Math.max(1, JSON.parse(raw)) : 1;
+  } catch {
+    return 1;
+  }
 }
